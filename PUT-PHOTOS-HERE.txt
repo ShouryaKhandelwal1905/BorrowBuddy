@@ -1,0 +1,35 @@
+Put a real photo for each item in this folder, named exactly as below (JPG, landscape works best, about 800 px wide).
+BorrowBuddy shows the photo automatically. If a file is missing, the drawn illustration is used instead.
+
+item-1.jpg  ->  Large steel biryani degchi
+item-2.jpg  ->  Diwali string lights (20 m)
+item-3.jpg  ->  4-person camping tent
+item-4.jpg  ->  Cordless power drill
+item-5.jpg  ->  Jumbo bouncy castle
+item-6.jpg  ->  Party tablecloths and bunting
+item-7.jpg  ->  Folding ladder (8 ft)
+item-8.jpg  ->  Hand trolley
+item-9.jpg  ->  Wedding banquet chairs (set of 20)
+item-10.jpg  ->  Dholak and speaker set
+item-11.jpg  ->  DSLR camera with 50 mm lens
+item-12.jpg  ->  Pop-up photo backdrop
+item-13.jpg  ->  Laptop (a few hours)
+item-14.jpg  ->  Red and gold bridal lehenga
+item-15.jpg  ->  Kundan necklace and earring set
+item-16.jpg  ->  Mini projector with screen
+item-17.jpg  ->  Karaoke microphone pair
+item-18.jpg  ->  Three-tier cake stand
+item-19.jpg  ->  Floral wedding arch
+item-20.jpg  ->  Trekking backpack (60 L)
+item-21.jpg  ->  Fire pit with camp chairs
+item-22.jpg  ->  Brass diya and rangoli set
+item-23.jpg  ->  Acoustic guitar
+item-24.jpg  ->  Party gazebo (3 x 3 m)
+item-25.jpg  ->  Ring light with tripod
+item-26.jpg  ->  Paper akash kandil lantern set
+item-27.jpg  ->  Marigold torans and garlands
+item-28.jpg  ->  Brass puja thali set
+item-29.jpg  ->  Two-person sleeping bag set
+item-30.jpg  ->  Camping stove and cookset
+item-31.jpg  ->  Double hammock with straps
+item-32.jpg  ->  Rechargeable camp lantern

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BorrowBuddy – Borrow from your neighbours</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tracker.js"></script>
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--ink:#1b2340;--mute:#5f6783;--line:#dde2ee;--gold:#f0a21b;--gold-s:#fdf0d4;--teal:#1f8a70;--teal-s:#d9f1ea;--rose:#d9455f;--rose-s:#fbe0e5;--ink-s:#e6eaf6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12162a;--card:#1b2140;--ink:#eef0fa;--mute:#a2a9c6;--line:#2e3659;--gold-s:#3b2f14;--teal-s:#16362f;--rose-s:#42212a;--ink-s:#262d52;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12162a;--card:#1b2140;--ink:#eef0fa;--mute:#a2a9c6;--line:#2e3659;--gold-s:#3b2f14;--teal-s:#16362f;--rose-s:#42212a;--ink-s:#262d52;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "DM Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;margin:0;line-height:1.1}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.logo{font:800 24px "Bricolage Grotesque",sans-serif;display:flex;align-items:center;gap:8px;margin-right:auto}
+.logo i{font-style:normal;background:var(--gold);color:#1b2340;border-radius:10px 10px 10px 2px;width:34px;height:34px;display:grid;place-items:center;font-size:18px}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:0;background:none;padding:8px 14px;border-radius:99px;font-weight:500;color:var(--mute)}
+nav button[aria-current=true]{background:var(--ink);color:var(--bg)}
+nav .badge{background:var(--rose);color:#fff;border-radius:99px;font-size:12px;padding:1px 7px;margin-left:4px}
+.hero{padding:34px 0 8px}
+.hero h1{font-size:clamp(32px,6vw,56px);font-weight:800;max-width:15ch;letter-spacing:-.02em}
+.hero p{color:var(--mute);max-width:52ch;margin:12px 0 18px;font-size:18px}
+.search{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search input,.f input,.f select,.f textarea{width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit}
+.search input{max-width:380px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 6px}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:7px 14px;font-weight:500}
+.chip[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#1b2340}
+.count{color:var(--mute);margin:10px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;padding-bottom:50px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;text-align:left;padding:0;display:flex;flex-direction:column}
+button.card:hover{border-color:var(--ink)}
+.tile{height:150px;overflow:hidden}.pic{height:210px;overflow:hidden}.tile svg,.tile img,.pic svg,.pic img{width:100%;height:100%;display:block;object-fit:cover}
+.cb{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.cb h3{font-size:19px}
+.meta{color:var(--mute);font-size:14px}
+.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:var(--ink-s);margin:0 4px 4px 0}
+.st{font-size:13px;font-weight:700;padding:3px 10px;border-radius:99px;display:inline-block;align-self:flex-start}
+.ok{background:var(--teal-s);color:var(--teal)}.out{background:var(--gold-s);color:#b87400}.bad{background:var(--rose-s);color:var(--rose)}
+.owner{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px;border-top:1px dashed var(--line);font-size:14px}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none;font-size:14px}
+.btn{border:0;background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:700}
+.btn.alt{background:var(--ink-s);color:var(--ink)}.btn.sm{padding:7px 12px;font-size:14px}.btn:disabled{opacity:.4;cursor:not-allowed}
+.sec{padding:26px 0 50px}.sec h2{font-size:32px;margin-bottom:6px}
+.nb{padding:16px;display:flex;flex-direction:column;gap:8px}
+.nb .top{display:flex;gap:12px;align-items:center}.nb .av{width:48px;height:48px;font-size:18px}
+.mini{display:flex;gap:6px;flex-wrap:wrap}.mini span{background:var(--ink-s);border-radius:10px;padding:3px 10px;font-size:14px}
+.loan{padding:16px;display:grid;gap:10px;margin-bottom:14px}
+.loan .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.bar{height:10px;border-radius:9px;background:var(--ink-s);overflow:hidden}.bar i{display:block;height:100%;background:var(--teal)}
+.bar.late i{background:var(--rose)}
+.empty{padding:30px;border:2px dashed var(--line);border-radius:18px;color:var(--mute);text-align:center}
+.f{display:grid;gap:12px;max-width:520px}.f label{font-weight:500;display:grid;gap:5px}
+.oc{display:flex;gap:8px;flex-wrap:wrap}.oc label{display:flex;gap:6px;align-items:center;font-weight:400;border:1.5px solid var(--line);border-radius:99px;padding:5px 12px;background:var(--card)}
+.ov{position:fixed;inset:0;background:rgba(10,14,30,.6);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 12px;z-index:20}
+.ov.on{display:flex}
+.modal{background:var(--card);border-radius:22px;max-width:760px;width:100%;overflow:hidden;margin:auto}
+.mh{display:flex;gap:14px;align-items:center;padding:18px 22px}.mh .tile{width:78px;height:78px;border-radius:18px;font-size:42px;flex:none}
+.mh h2{font-size:28px}.x{margin-left:auto;align-self:flex-start;border:0;background:var(--ink-s);width:38px;height:38px;border-radius:50%;font-size:20px}
+.mb{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:0 22px 22px}
+@media(max-width:680px){.mb{grid-template-columns:1fr}}
+.nbox{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:8px;margin:10px 0}
+.nbox a{color:var(--teal);font-weight:700}
+.cal h3{font-size:18px;text-align:center}.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ch button{border:1px solid var(--line);background:var(--card);border-radius:10px;width:36px;height:36px}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.cg b{font-size:12px;color:var(--mute);font-weight:500}
+.d{aspect-ratio:1;border:0;border-radius:10px;background:var(--teal-s);color:var(--ink);font-size:14px}
+.d.e{visibility:hidden}.d.bk{background:var(--rose-s);color:var(--rose);text-decoration:line-through;cursor:not-allowed}
+.d.mine{background:var(--gold-s);color:#b87400;font-weight:700;cursor:not-allowed}
+.d.past{background:none;color:var(--mute);opacity:.45;cursor:not-allowed}
+.d.sel{background:var(--ink);color:var(--bg);font-weight:700}
+.d.today{outline:2px solid var(--gold)}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:10px}.lg i{display:inline-block;width:11px;height:11px;border-radius:4px;margin-right:4px;vertical-align:-1px}
+.sum{background:var(--ink-s);border-radius:12px;padding:10px 12px;margin:12px 0;font-size:15px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 20px;border-radius:14px;z-index:30;opacity:0;pointer-events:none;transition:opacity .25s}
+.toast.on{opacity:1}
+.pr{font:800 20px 'Bricolage Grotesque','DM Sans',sans-serif;color:var(--teal)}.pr small{font:400 13px 'DM Sans',sans-serif;color:var(--mute)}.ph{display:block;position:relative;height:100%}.ph i{position:absolute;inset:0;background:center/cover no-repeat}@property --a{syntax:'<color>';inherits:true;initial-value:#1b2340}@property --b{syntax:'<color>';inherits:true;initial-value:#3b4a8a}
+.hero2{--a:#1b2340;--b:#3b4a8a;background:linear-gradient(120deg,var(--a),var(--b));transition:--a .6s,--b .6s;color:#fff;border-radius:28px;padding:34px 30px;margin-top:18px;position:relative;overflow:hidden}
+.hero2 h1{font-size:clamp(32px,6vw,54px);font-weight:800;max-width:14ch;letter-spacing:-.02em}
+.hero2 p{max-width:46ch;opacity:.92;font-size:18px;margin:12px 0 16px}
+.hero2 .search input{border:0;max-width:420px;box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.hst{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.hst span{background:rgba(255,255,255,.18);border-radius:99px;padding:5px 14px;font-weight:500}
+.big{position:absolute;right:30px;top:50%;margin-top:-70px;font-size:120px;line-height:1;filter:drop-shadow(0 10px 20px rgba(0,0,0,.3))}
+.pop{animation:pop .45s}@keyframes pop{0%{transform:scale(.5) rotate(-12deg);opacity:0}70%{transform:scale(1.1) rotate(4deg)}100%{transform:none;opacity:1}}
+@media(max-width:640px){.big{display:none}}
+.chip{transition:background .2s,transform .15s}.chip:hover{transform:translateY(-2px)}
+.tools{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:8px 0 4px}
+.tools select{padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit}
+.tools label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mute)}.tools input[type=range]{accent-color:var(--teal);width:130px}
+.cw{position:relative;display:flex}.cw .card{width:100%;transition:transform .2s,box-shadow .2s}.cw:hover .card{transform:translateY(-4px);box-shadow:0 14px 30px rgba(20,30,70,.16)}
+.tile svg{transition:transform .5s}.cw:hover .tile svg{transform:scale(1.07)}
+.fav{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.93);color:#9aa3bd;font-size:18px;transition:transform .15s}.fav:hover{transform:scale(1.15)}.fav.on{color:var(--rose);animation:pop .35s}
+.card.nb{transition:transform .2s}.card.nb:hover{transform:translateY(-3px)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:14px 0 20px}.tiles div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;color:var(--mute);font-size:14px}.tiles b{display:block;font:800 28px 'Bricolage Grotesque',sans-serif;color:var(--ink)}.tiles .lt b{color:var(--rose)}
+.prr{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.rt{font-weight:700;font-size:14px;color:#b87400}.rt small{color:var(--mute);font-weight:400}.rt.n{color:var(--mute);font-weight:400}
+.stars{color:#f0a21b;letter-spacing:1px}
+.rv{padding:0 22px 24px;border-top:1px solid var(--line)}.rv h3{margin:18px 0 10px;font-size:20px}
+.rsum{display:flex;align-items:center;gap:10px;margin-bottom:12px}.rsum b{font:800 34px 'Bricolage Grotesque',sans-serif}
+.rev{padding:12px 0;border-top:1px dashed var(--line)}.rev p{margin:6px 0 0;font-size:15px}
+.rh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.rh .av{width:28px;height:28px;font-size:12px}.rh .meta{margin-left:auto}
+.stp{display:flex;gap:4px}.stp button{border:0;background:none;font-size:40px;line-height:1;color:var(--line);padding:0 2px;transition:transform .12s,color .12s}.stp button.on{color:#f0a21b}.stp button:hover{transform:scale(1.15)}
+.modal{position:relative}.x{position:absolute;top:12px;right:12px;z-index:2;background:var(--card)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="logo"><img src="logo.jpg" alt="BorrowBuddy" style="height:42px;border-radius:8px">BorrowBuddy</div>
+  <nav id="nav" aria-label="Sections"></nav>
+  <div id="userHeader" style="margin-left:auto;display:flex;align-items:center;gap:10px"></div>
+</div></header>
+<main class="wrap" id="main"></main>
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-label="Item details"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ── Supabase Backend Connection ── */
+const SUPABASE_URL = 'https://wrikxgglpabvtcsvopwc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_RqgsPBhoiaP7Dhq5lSeImQ_nqwHCXfP';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+function renderUserHeader() {
+  const h = document.getElementById('userHeader');
+  if (!h) return;
+  const user = JSON.parse(localStorage.getItem('bb_user') || 'null');
+  if (user && (user.name || user.email)) {
+    const name = user.name || user.full_name || user.email.split('@')[0];
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    ME.name = name;
+    if (user.phone) ME.ph = user.phone;
+    if (user.locality) ME.blk = user.locality;
+    h.innerHTML = `
+      <div id="userPill" style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);padding:4px 10px;border-radius:99px;cursor:pointer" title="View & edit account">
+        <span class="av" style="background:#1f8a70;width:28px;height:28px;font-size:12px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700">${initials}</span>
+        <span style="font-size:14px;font-weight:600;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span>
+      </div>
+      <a href="admin.html" class="btn sm alt" style="text-decoration:none;padding:6px 12px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:4px" title="Admin Security Portal">🛡️ Admin</a>
+      <button class="btn sm alt" id="logoutBtn" style="padding:6px 12px;font-size:13px">Log out</button>`;
+    document.getElementById('userPill').onclick = openProfileModal;
+    document.getElementById('logoutBtn').onclick = async () => {
+      localStorage.removeItem('bb_user');
+      if (sb) { try { await sb.auth.signOut(); } catch (e) {} }
+      if (window.BB_TRACK) BB_TRACK('LOGOUT', {});
+      toast('Logged out');
+      renderUserHeader();
+    };
+  } else {
+    h.innerHTML = `
+      <a href="admin.html" class="btn sm alt" style="text-decoration:none;padding:6px 11px;font-size:13px;font-weight:700" title="Admin Security Portal">🛡️ Admin</a>
+      <a href="login.html" class="btn sm alt" style="text-decoration:none;padding:7px 14px;font-size:13px">Log In</a>
+      <a href="signup.html" class="btn sm" style="text-decoration:none;padding:7px 14px;font-size:13px">Sign Up</a>`;
+  }
+}
+
+// Sync session from Supabase on load (handles OAuth callback redirect too)
+(async () => {
+  if (!sb) return;
+  try {
+    // Handle OAuth callback: Supabase sets the session from URL hash/code automatically
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) {
+      let prof = null;
+      try {
+        const { data: p } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+        if (p) prof = p;
+      } catch (e) {}
+
+      // If no profile row yet (new OAuth user), create one
+      if (!prof) {
+        const meta = session.user.user_metadata || {};
+        const fullName = meta.full_name || meta.name || session.user.email?.split('@')[0] || 'User';
+        try {
+          await sb.from('profiles').upsert({
+            id: session.user.id,
+            full_name: fullName,
+            email: session.user.email,
+            phone: meta.phone || '',
+            locality: meta.locality || 'My Society',
+            created_at: new Date().toISOString()
+          });
+          prof = { full_name: fullName, email: session.user.email, phone: '', locality: 'My Society' };
+        } catch (e) {}
+      }
+
+      const meta = session.user.user_metadata || {};
+      const u = {
+        id: session.user.id,
+        name: prof?.full_name || meta.full_name || meta.name || session.user.email?.split('@')[0],
+        full_name: prof?.full_name || meta.full_name || '',
+        email: session.user.email,
+        phone: prof?.phone || meta.phone || '',
+        locality: prof?.locality || meta.locality || ''
+      };
+      localStorage.setItem('bb_user', JSON.stringify(u));
+      renderUserHeader();
+
+      // Clean up the OAuth hash from the URL without reloading
+      if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  } catch (e) { console.warn('Session sync:', e); }
+})();
+
+async function saveItemToSupabase(item) {
+  if (!sb) return;
+  try { await sb.from('items').upsert([item]); } catch (err) { console.warn('Supabase items save:', err); }
+}
+
+async function saveLoanToSupabase(loan) {
+  if (!sb) return;
+  try { await sb.from('loans').upsert([loan]); } catch (err) { console.warn('Supabase loans save:', err); }
+}
+
+async function updateLoanInSupabase(loan) {
+  if (!sb) return;
+  try { await sb.from('loans').upsert([loan]); } catch (err) { console.warn('Supabase loans update:', err); }
+}
+
+async function saveReviewToSupabase(rev) {
+  if (!sb) return;
+  try { await sb.from('reviews').insert([rev]); } catch (err) { console.warn('Supabase reviews save:', err); }
+}
+
+async function loadFromSupabase() {
+  if (!sb) return;
+  try {
+    const [itemsRes, loansRes, revsRes] = await Promise.allSettled([
+      sb.from('items').select('*'),
+      sb.from('loans').select('*'),
+      sb.from('reviews').select('*')
+    ]);
+    let changed = false;
+    if (itemsRes.status === 'fulfilled' && itemsRes.value.data?.length) {
+      itemsRes.value.data.forEach(ri => {
+        if (!st.items.some(li => li.id === ri.id)) { st.items.push(ri); changed = true; }
+      });
+    }
+    if (loansRes.status === 'fulfilled' && loansRes.value.data?.length) {
+      loansRes.value.data.forEach(rl => {
+        if (!st.loans.some(ll => ll.id === rl.id)) { st.loans.push(rl); changed = true; }
+      });
+    }
+    if (revsRes.status === 'fulfilled' && revsRes.value.data?.length) {
+      st.revs = st.revs || [];
+      revsRes.value.data.forEach(rr => {
+        if (!st.revs.some(lr => lr.item === rr.item && lr.t === rr.t && lr.d === rr.d)) { st.revs.push(rr); changed = true; }
+      });
+    }
+    if (changed) { save(); render(); }
+  } catch (err) { console.warn('Supabase initial fetch:', err); }
+}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DAY=864e5,now=new Date(),TODAY=Math.floor(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())/DAY);
+const fmt=(n,o={day:'numeric',month:'short'})=>new Date(n*DAY).toLocaleDateString('en-IN',{...o,timeZone:'UTC'});
+const OCC=['Wedding','Diwali','Birthday party','Camping','Moving house','Home repair','Festival'];
+const COL=['#1f8a70','#d9455f','#5a6bd6','#c27a00','#8a4fb0','#2b7fa8','#1b2340'];
+const NB=[
+{id:1,name:'Meera Sharma',blk:'Signature Lake City, Sector 116',ph:'+91 98765 43210',r:4.9,n:31,about:'Hosts the society’s Diwali dinner every year.',reply:'about 1 hour'},
+{id:2,name:'Gurpreet Singh',blk:'Bollywood Green City, Sector 113',ph:'+91 98140 22871',r:4.8,n:44,about:'Weekend camper and DIY fan.',reply:'a few hours'},
+{id:3,name:'Anita Verma',blk:'Ansal Orchard County, Sector 115',ph:'+91 99150 66120',r:5.0,n:18,about:'Loves planning kids’ birthdays.',reply:'30 minutes'},
+{id:4,name:'Rohan Mehta',blk:'Realcon Mohali, Sector 113 Landran Chowk',ph:'+91 70099 18345',r:4.6,n:12,about:'Just moved in. Has lots of tools.',reply:'same day'},
+{id:5,name:'Harleen Kaur',blk:'Divine World 717, Sector 115',ph:'+91 98723 40918',r:4.9,n:27,about:'Wedding planner by profession.',reply:'about 1 hour'},
+{id:6,name:'Dr. Imran Qureshi',blk:'TDI City 2274, Landran',ph:'+91 88720 55512',r:4.7,n:9,about:'Photographer on weekends.',reply:'in the evening'},
+{id:7,name:'Sumit Sharma',blk:'Jhanjheri, Mohali',ph:'+91 94234 30796',r:4.8,n:6,about:'Happy to lend his laptop for a few hours.',reply:'a few hours'},
+{id:8,name:'Simran Dhillon',blk:'Gillco Valley, Kharar',ph:'+91 90000 10008',r:4.9,n:22,about:'Keeps a wardrobe of wedding and festive wear.',reply:'about 1 hour'},
+{id:9,name:'Aman Bedi',blk:'Sunny Enclave, Kharar',ph:'+91 90000 10009',r:4.7,n:15,about:'Tech fan who loves hosting movie nights.',reply:'a few hours'},
+{id:10,name:'Priya Nair',blk:'Sector 112, Mohali',ph:'+91 90000 10010',r:5.0,n:26,about:'Home baker behind many birthday cakes.',reply:'30 minutes'},
+{id:11,name:'Karan Sandhu',blk:'Jhanjheri Village, near CGC',ph:'+91 90000 10011',r:4.8,n:19,about:'Weekend trekker and camp cook.',reply:'same day'},
+{id:12,name:'Pooja Arora',blk:'Landran, Mohali',ph:'+91 90000 10012',r:4.9,n:33,about:'Decorates her home for every festival.',reply:'about 1 hour'},
+{id:13,name:'Tejinder Gill',blk:'Sector 115, Kharar',ph:'+91 90000 10013',r:4.8,n:41,about:'Event decorator who lends spare gear.',reply:'a few hours'},
+{id:14,name:'Neha Chopra',blk:'Kharar-Landran Road',ph:'+91 90000 10014',r:4.6,n:11,about:'Plays guitar at society events.',reply:'in the evening'}];
+const ME={id:0,name:'You',blk:'Block C, House 12',ph:'',r:5,n:0,about:'',reply:''};
+const IT=[
+{id:1,o:1,name:'Large steel biryani degchi',e:'🍲',occ:['Wedding','Diwali','Birthday party'],max:3,d:'40-litre degchi with lid. Feeds around 60 people.',bk:[[2,4],[12,13]]},
+{id:2,o:1,name:'Diwali string lights (20 m)',e:'💡',occ:['Diwali','Festival','Wedding'],max:10,d:'Warm white, weatherproof, with two extension cords.',bk:[[-1,1],[8,9]]},
+{id:3,o:2,name:'4-person camping tent',e:'⛺',occ:['Camping'],max:5,d:'Waterproof dome tent with rain fly and ground sheet.',bk:[[5,7],[15,18]]},
+{id:4,o:2,name:'Cordless power drill',e:'🔧',occ:['Home repair','Moving house'],max:3,d:'18V drill with 30 bits. Please return the battery charged.',bk:[[1,1],[6,6]]},
+{id:5,o:3,name:'Jumbo bouncy castle',e:'🏰',occ:['Birthday party'],max:2,d:'12 ft inflatable with blower. Needs a flat lawn.',bk:[[3,3],[10,11]]},
+{id:6,o:3,name:'Party tablecloths and bunting',e:'🎉',occ:['Birthday party','Festival'],max:4,d:'Eight tablecloths and 10 m of bunting in mixed colours.',bk:[]},
+{id:7,o:4,name:'Folding ladder (8 ft)',e:'🪜',occ:['Home repair','Diwali','Moving house'],max:3,d:'Aluminium, holds 120 kg. Good for lights and painting.',bk:[[0,0],[4,5]]},
+{id:8,o:4,name:'Hand trolley',e:'🛒',occ:['Moving house'],max:4,d:'Folds flat. Carries up to 150 kg.',bk:[[9,12]]},
+{id:9,o:5,name:'Wedding banquet chairs (set of 20)',e:'🪑',occ:['Wedding','Festival','Birthday party'],max:3,d:'Cushioned gold chairs. Pick-up needs a tempo.',bk:[[4,6],[20,22]]},
+{id:10,o:5,name:'Dholak and speaker set',e:'🥁',occ:['Wedding','Festival','Diwali'],max:2,d:'Dholak, two stands, and a 200 W Bluetooth speaker.',bk:[[7,8]]},
+{id:11,o:6,name:'DSLR camera with 50 mm lens',e:'📷',occ:['Wedding','Birthday party','Festival'],max:3,d:'Includes two batteries and a 64 GB card. Handle with care.',bk:[[2,3],[11,12]]},
+{id:12,o:6,name:'Pop-up photo backdrop',e:'🖼️',occ:['Birthday party','Wedding'],max:3,d:'2 m x 2 m backdrop with stand and clamps.',bk:[]},
+{id:13,o:7,hrs:1,name:'Laptop (a few hours)',e:'💻',occ:['Birthday party','Wedding','Festival'],max:1,d:'Laptop for slideshows, music playlists or quick work. Lent for a few hours on the same day.',bk:[[3,3]]},
+{id:14,o:8,name:'Red and gold bridal lehenga',e:'👗',occ:['Wedding','Festival'],max:3,d:'Embroidered lehenga with dupatta, size M. Dry-cleaned before every return.',bk:[[6,8]]},
+{id:15,o:8,name:'Kundan necklace and earring set',e:'📿',occ:['Wedding','Festival','Diwali'],max:2,d:'Gold-tone kundan set with red stones, in its own box.',bk:[[1,2]]},
+{id:16,o:9,name:'Mini projector with screen',e:'📽️',occ:['Birthday party','Festival'],max:2,d:'HD projector, HDMI cable and a 100-inch fold-up screen.',bk:[[5,5]]},
+{id:17,o:9,name:'Karaoke microphone pair',e:'🎤',occ:['Birthday party','Wedding','Festival'],max:2,d:'Two wireless mics with a receiver. Batteries included.',bk:[]},
+{id:18,o:10,name:'Three-tier cake stand',e:'🎂',occ:['Birthday party','Wedding'],max:2,d:'Sturdy stand for cakes and cupcakes, plus a piping set.',bk:[[2,2],[9,10]]},
+{id:19,o:13,name:'Floral wedding arch',e:'💐',occ:['Wedding'],max:3,d:'Metal arch with artificial roses and fairy lights. Pick-up needs a tempo.',bk:[[4,5],[14,16]]},
+{id:20,o:11,name:'Trekking backpack (60 L)',e:'🎒',occ:['Camping'],max:5,d:'Rain cover, padded straps and a sleeping-mat holder.',bk:[[8,10]]},
+{id:21,o:11,name:'Fire pit with camp chairs',e:'🔥',occ:['Camping','Festival'],max:3,d:'Portable fire pit with four folding chairs. Use only in open, safe spaces.',bk:[[3,4]]},
+{id:22,o:12,name:'Brass diya and rangoli set',e:'🪔',occ:['Diwali','Festival'],max:7,d:'Twelve brass diyas, a rangoli stencil and coloured powder.',bk:[[0,2]]},
+{id:23,o:14,name:'Acoustic guitar',e:'🎸',occ:['Birthday party','Festival','Wedding'],max:2,d:'Full-size guitar with a soft case, strap and spare strings.',bk:[[6,7]]},
+{id:24,o:13,name:'Party gazebo (3 x 3 m)',e:'⛱️',occ:['Wedding','Festival','Birthday party'],max:2,d:'Shade and rain cover for a lawn party. Easy four-person setup.',bk:[[10,12]]},
+{id:25,o:14,name:'Ring light with tripod',e:'📸',occ:['Birthday party','Wedding','Festival'],max:3,d:'18-inch ring light, phone holder and a 6 ft tripod.',bk:[]},
+{id:26,o:12,name:'Paper akash kandil lantern set',e:'🏮',occ:['Diwali','Festival'],max:7,d:'Six hand-folded paper lanterns with warm LED bulbs.',bk:[]},
+{id:27,o:12,name:'Marigold torans and garlands',e:'🌼',occ:['Diwali','Wedding','Festival'],max:5,d:'Reusable marigold torans for door frames and balconies.',bk:[]},
+{id:28,o:1,name:'Brass puja thali set',e:'🪔',occ:['Diwali','Festival'],max:4,d:'Brass thali with a diya, small bowls and a bell.',bk:[]},
+{id:29,o:11,name:'Two-person sleeping bag set',e:'🛌',occ:['Camping'],max:5,d:'Two warm sleeping bags, washed after every trip.',bk:[]},
+{id:30,o:11,name:'Camping stove and cookset',e:'🍳',occ:['Camping'],max:4,d:'Gas stove with a pot and a pan. Bring your own gas cylinder.',bk:[]},
+{id:31,o:2,name:'Double hammock with straps',e:'🌳',occ:['Camping','Festival'],max:5,d:'Tree-friendly straps included. Holds up to 200 kg.',bk:[]},
+{id:32,o:2,name:'Rechargeable camp lantern',e:'🔦',occ:['Camping','Festival'],max:5,d:'Bright LED lantern with up to 12 hours on a charge.',bk:[]}];
+const PRICE={1:150,2:100,3:300,4:100,5:800,6:120,7:80,8:70,9:400,10:350,11:600,12:200,13:100,14:1000,15:500,16:500,17:250,18:100,19:900,20:150,21:300,22:80,23:200,24:600,25:150,26:120,27:100,28:150,29:200,30:250,31:120,32:90};
+const price=it=>it.p??PRICE[it.id]??0;
+const pt=it=>price(it)?`₹${price(it)}<small>${it.hrs?' for the few hours':' per day'}</small>`:'';
+const cost=d=>{const p=price(cur);return '₹'+(cur.hrs?p:p*d)};
+const ARTK={1:'degchi',2:'lights',3:'tent',4:'drill',5:'castle',6:'bunting',7:'ladder',8:'trolley',9:'chairs',10:'dholak',11:'camera',12:'backdrop',13:'laptop',14:'lehenga',15:'jewel',16:'projector',17:'mic',18:'cake',19:'arch',20:'pack',21:'fire',22:'diya',23:'guitar',24:'gazebo',25:'ring',26:'lantern',27:'toran',28:'thali',29:'bag',30:'stove',31:'hammock',32:'camplight'};
+const ART={
+degchi:`<path d='M52 52h96l-8 40q-2 8-12 8H72q-10 0-12-8z' fill='#cfd6e3'/><rect x='48' y='46' width='104' height='10' rx='5' fill='#eef1f8'/><path d='M64 46q36-26 72 0z' fill='#aeb8cc'/><circle cx='100' cy='34' r='6' fill='#f0a21b'/><circle cx='46' cy='64' r='6' fill='none' stroke='#8a96b0' stroke-width='4'/><circle cx='154' cy='64' r='6' fill='none' stroke='#8a96b0' stroke-width='4'/><path d='M62 70h76' stroke='#fff' stroke-opacity='.5' stroke-width='3'/>`,
+lights:`<path d='M8 30Q60 84 104 46T194 40' fill='none' stroke='#fff' stroke-opacity='.6' stroke-width='2'/><g fill='#ffd54a' opacity='.3'><circle cx='34' cy='58' r='13'/><circle cx='67' cy='69' r='13'/><circle cx='95' cy='60' r='13'/><circle cx='122' cy='41' r='13'/><circle cx='140' cy='34' r='13'/><circle cx='176' cy='37' r='13'/></g><g fill='#ffd54a'><circle cx='34' cy='58' r='6'/><circle cx='67' cy='69' r='6'/><circle cx='95' cy='60' r='6'/><circle cx='122' cy='41' r='6'/><circle cx='140' cy='34' r='6'/><circle cx='176' cy='37' r='6'/></g>`,
+tent:`<path d='M100 24L38 100h124z' fill='#f5f7fb'/><path d='M100 24l62 76h-40z' fill='#dde3f0'/><path d='M100 54L80 100h40z' fill='#2f3a63'/><path d='M100 24v-10' stroke='#fff' stroke-width='3'/>`,
+drill:`<path d='M46 48h74a10 10 0 0 1 10 10v14H46z' fill='#f0b429'/><path d='M80 72h32l-6 28H80z' fill='#2b3354'/><rect x='74' y='98' width='38' height='10' rx='3' fill='#4a5580'/><rect x='130' y='54' width='20' height='12' fill='#9aa5bf'/><path d='M150 60h28' stroke='#e6eaf6' stroke-width='3'/><circle cx='64' cy='60' r='5' fill='#2b3354'/>`,
+castle:`<rect x='44' y='60' width='112' height='38' fill='#ff8fa3'/><rect x='44' y='42' width='28' height='56' fill='#ffb3c2'/><rect x='128' y='42' width='28' height='56' fill='#ffb3c2'/><rect x='86' y='32' width='28' height='66' fill='#ffc9d4'/><path d='M44 42l14-16 14 16zM128 42l14-16 14 16zM86 32l14-18 14 18z' fill='#7aa2ff'/><path d='M100 14V4l10 4-10 4' fill='#ffd54a'/><path d='M92 98V80a8 8 0 0 1 16 0v18z' fill='#fff'/><circle cx='58' cy='62' r='4' fill='#fff'/><circle cx='142' cy='62' r='4' fill='#fff'/>`,
+bunting:`<path d='M16 30Q100 70 184 30' fill='none' stroke='#fff' stroke-width='2'/><path d='M36 38l12 2-4 20zM84 49l12 1-6 19zM132 47l12-2-6 19z' fill='#ffd54a'/><path d='M60 45l12 2-6 18zM108 50l12-1-6 19zM156 42l12-3-6 20z' fill='#ff8fa3'/><rect x='56' y='80' width='88' height='20' rx='3' fill='#fff'/><path d='M56 88h88M56 94h88' stroke='#d9455f' stroke-width='3'/>`,
+ladder:`<path d='M70 102L88 18M130 102L112 18' stroke='#e6eaf6' stroke-width='6' stroke-linecap='round'/><path d='M83 40h34M79 58h42M75 76h50M72 92h56' stroke='#aeb8cc' stroke-width='5' stroke-linecap='round'/>`,
+trolley:`<path d='M70 18V94h42' fill='none' stroke='#e6eaf6' stroke-width='6' stroke-linecap='round'/><rect x='76' y='60' width='38' height='32' fill='#c9a36b'/><rect x='80' y='40' width='28' height='20' fill='#dfb97d'/><path d='M76 76h38' stroke='#9c7a45' stroke-width='3'/><circle cx='98' cy='96' r='10' fill='#2b3354' stroke='#e6eaf6' stroke-width='3'/>`,
+chairs:`<rect x='36' y='34' width='32' height='36' rx='6' fill='#f0c14b'/><rect x='32' y='68' width='40' height='10' rx='3' fill='#c9962a'/><path d='M38 78v22M66 78v22' stroke='#e6eaf6' stroke-width='4'/><rect x='104' y='34' width='32' height='36' rx='6' fill='#f0c14b'/><rect x='100' y='68' width='40' height='10' rx='3' fill='#c9962a'/><path d='M106 78v22M134 78v22' stroke='#e6eaf6' stroke-width='4'/>`,
+dholak:`<path d='M56 40Q100 30 144 38V84Q100 92 56 82z' fill='#b8651b'/><ellipse cx='56' cy='61' rx='10' ry='21' fill='#e8c27a'/><ellipse cx='144' cy='61' rx='14' ry='24' fill='#f0d79a'/><path d='M72 38l12 46M90 36l12 50M108 35l12 52M126 36l12 50' stroke='#f5e6c8' stroke-width='2.5'/>`,
+camera:`<rect x='46' y='44' width='108' height='54' rx='10' fill='#2b3354'/><rect x='84' y='34' width='32' height='14' rx='4' fill='#3b4670'/><circle cx='100' cy='72' r='22' fill='#12162a'/><circle cx='100' cy='72' r='15' fill='#3b4a8a'/><circle cx='100' cy='72' r='6' fill='#9fb4ff'/><rect x='56' y='50' width='16' height='8' rx='2' fill='#f0a21b'/><circle cx='138' cy='54' r='4' fill='#d9455f'/>`,
+backdrop:`<rect x='46' y='20' width='108' height='64' rx='4' fill='#fff8e6'/><circle cx='72' cy='50' r='13' fill='#ff8fa3'/><circle cx='98' cy='42' r='13' fill='#ffd54a'/><circle cx='124' cy='52' r='13' fill='#7fd6c2'/><circle cx='100' cy='64' r='11' fill='#7aa2ff'/><circle cx='138' cy='34' r='9' fill='#ff8fa3'/><path d='M56 84v20M144 84v20' stroke='#e6eaf6' stroke-width='4'/>`,
+laptop:`<rect x='54' y='28' width='92' height='58' rx='6' fill='#2b3354'/><rect x='60' y='34' width='80' height='46' rx='2' fill='#7aa2ff'/><circle cx='118' cy='50' r='12' fill='#ffd54a' opacity='.8'/><path d='M60 80l22-24 18 16 14-12 26 20z' fill='#2f8a70' opacity='.7'/><path d='M38 92h124l-8 10H46z' fill='#cfd6e3'/>`,
+lehenga:`<path d='M82 24h36l4 28H78z' fill='#b02a45'/><path d='M70 50h60l30 54H40z' fill='#d9455f'/><rect x='72' y='48' width='56' height='6' fill='#f0c14b'/><path d='M44 96h112v8H44z' fill='#f0c14b'/><path d='M90 24Q60 40 56 74' fill='none' stroke='#f0c14b' stroke-width='5'/><g fill='#f0c14b'><circle cx='80' cy='78' r='3'/><circle cx='100' cy='86' r='3'/><circle cx='120' cy='78' r='3'/></g>`,
+jewel:`<path d='M48 24Q100 110 152 24' fill='none' stroke='#f0c14b' stroke-width='5'/><g fill='#d9455f' stroke='#f0c14b' stroke-width='2'><circle cx='68' cy='52' r='7'/><circle cx='82' cy='68' r='7'/><circle cx='100' cy='74' r='8'/><circle cx='118' cy='68' r='7'/><circle cx='132' cy='52' r='7'/></g><path d='M100 82l-8 14 8 8 8-8z' fill='#f0c14b'/>`,
+projector:`<path d='M142 70L194 36V104z' fill='#ffd54a' opacity='.35'/><rect x='44' y='50' width='100' height='42' rx='8' fill='#e6eaf6'/><circle cx='124' cy='71' r='15' fill='#2b3354'/><circle cx='124' cy='71' r='8' fill='#7aa2ff'/><path d='M58 62h40M58 70h40M58 78h40' stroke='#aeb8cc' stroke-width='3'/>`,
+mic:`<g><circle cx='72' cy='34' r='16' fill='#cfd6e3'/><path d='M60 34h24M72 20v28' stroke='#8a96b0' stroke-width='2'/><path d='M64 48h16l-3 54h-10z' fill='#2b3354'/></g><g transform='translate(54 6) rotate(18 72 70)'><circle cx='72' cy='34' r='16' fill='#f0a21b'/><path d='M60 34h24M72 20v28' stroke='#b87400' stroke-width='2'/><path d='M64 48h16l-3 54h-10z' fill='#2b3354'/></g>`,
+cake:`<rect x='56' y='76' width='88' height='22' rx='4' fill='#fbd5e0'/><rect x='70' y='56' width='60' height='20' rx='4' fill='#f7b5c9'/><rect x='84' y='40' width='32' height='16' rx='4' fill='#f08fae'/><path d='M56 80q11 8 22 0t22 0t22 0t22 0' fill='none' stroke='#fff' stroke-width='3'/><circle cx='100' cy='34' r='6' fill='#d9455f'/><path d='M100 28v-8' stroke='#fff' stroke-width='2'/><ellipse cx='100' cy='100' rx='60' ry='5' fill='#cfd6e3'/>`,
+arch:`<path d='M52 102V62a48 48 0 0 1 96 0v40' fill='none' stroke='#f2e3b8' stroke-width='6'/><g fill='#fff'><circle cx='52' cy='72' r='8'/><circle cx='64' cy='36' r='8'/><circle cx='100' cy='16' r='8'/><circle cx='136' cy='36' r='8'/><circle cx='148' cy='72' r='8'/></g><g fill='#ff8fa3'><circle cx='54' cy='52' r='8'/><circle cx='80' cy='22' r='8'/><circle cx='120' cy='22' r='8'/><circle cx='146' cy='52' r='8'/><circle cx='50' cy='92' r='7'/><circle cx='150' cy='92' r='7'/></g>`,
+pack:`<rect x='60' y='96' width='80' height='10' rx='5' fill='#f0a21b'/><rect x='64' y='30' width='72' height='68' rx='24' fill='#3a8a6a'/><path d='M80 30a20 20 0 0 1 40 0z' fill='#2f7358'/><rect x='76' y='64' width='48' height='28' rx='8' fill='#2b6a52'/><path d='M90 30v-10h20v10' fill='none' stroke='#e6eaf6' stroke-width='4'/><path d='M76 44v18M124 44v18' stroke='#e6eaf6' stroke-width='3'/>`,
+fire:`<path d='M58 98L142 82' stroke='#8b5a2b' stroke-width='10' stroke-linecap='round'/><path d='M58 82L142 98' stroke='#a06a35' stroke-width='10' stroke-linecap='round'/><path d='M100 18C120 44 130 58 112 84H88C72 64 86 46 100 18z' fill='#f0a21b'/><path d='M100 46C112 60 114 70 104 84H96C88 70 90 60 100 46z' fill='#ffd54a'/><g fill='#ffd54a'><circle cx='72' cy='36' r='2'/><circle cx='132' cy='28' r='2'/><circle cx='84' cy='20' r='1.5'/></g>`,
+diya:`<circle cx='100' cy='48' r='30' fill='#ffd54a' opacity='.25'/><path d='M100 26c12 14 14 22 0 34c-14-12-12-20 0-34z' fill='#ffd54a'/><path d='M50 66h100q-8 30-50 30t-50-30z' fill='#c98a1a'/><path d='M62 74h76' stroke='#f0c14b' stroke-width='3'/><g fill='#ff8fa3'><circle cx='56' cy='104' r='4'/><circle cx='80' cy='108' r='4'/><circle cx='120' cy='108' r='4'/><circle cx='144' cy='104' r='4'/></g>`,
+guitar:`<g transform='rotate(24 100 64)'><rect x='96' y='8' width='8' height='54' fill='#6b3f1d'/><rect x='93' y='2' width='14' height='14' rx='3' fill='#4a2a12'/><circle cx='100' cy='66' r='17' fill='#d98b3a'/><circle cx='100' cy='90' r='24' fill='#d98b3a'/><circle cx='100' cy='80' r='7' fill='#2b1a0f'/><rect x='91' y='94' width='18' height='4' fill='#2b1a0f'/></g>`,
+gazebo:`<path d='M100 16L36 54h128z' fill='#d9455f'/><path d='M100 16L76 54h24zM100 16l24 38h24z' fill='#fff' opacity='.85'/><path d='M46 54v46M154 54v46M100 54v46' stroke='#e6eaf6' stroke-width='4'/><rect x='38' y='98' width='124' height='6' rx='2' fill='#f0e3c0'/><path d='M46 54q8 20 0 40M154 54q-8 20 0 40' fill='none' stroke='#fff' stroke-opacity='.6' stroke-width='3'/>`,
+ring:`<circle cx='100' cy='48' r='28' fill='none' stroke='#fff' stroke-width='8'/><circle cx='100' cy='48' r='34' fill='none' stroke='#ffd54a' stroke-width='2' opacity='.6'/><rect x='91' y='36' width='18' height='28' rx='3' fill='#2b3354'/><path d='M100 80v24M100 90L72 106M100 90l28 16' stroke='#cfd6e3' stroke-width='4' stroke-linecap='round'/>`,
+lantern:`<path d='M100 6v16' stroke='#fff' stroke-width='3'/><path d='M76 26h48l10 24-10 34H76L66 50z' fill='#ff8f3a'/><path d='M76 26l-10 24 10 34M100 26v58M124 26l10 24-10 34' fill='none' stroke='#ffd9a0' stroke-width='2'/><rect x='72' y='22' width='56' height='8' rx='3' fill='#7a3b00'/><rect x='80' y='84' width='40' height='8' rx='3' fill='#7a3b00'/><path d='M92 94l-4 12M100 94v14M108 94l4 12' stroke='#ffd54a' stroke-width='3'/><circle cx='100' cy='54' r='12' fill='#ffd54a' opacity='.85'/>`,
+toran:`<path d='M12 22Q100 40 188 22' fill='none' stroke='#2f7d4a' stroke-width='3'/><path d='M34 30v40M64 36v52M100 38v64M136 36v52M166 30v40' stroke='#2f7d4a' stroke-width='2'/><g fill='#ffb62e'><circle cx='34' cy='42' r='7'/><circle cx='34' cy='58' r='7'/><circle cx='64' cy='48' r='7'/><circle cx='64' cy='64' r='7'/><circle cx='64' cy='80' r='7'/><circle cx='100' cy='50' r='7'/><circle cx='100' cy='66' r='7'/><circle cx='100' cy='82' r='7'/><circle cx='100' cy='98' r='7'/><circle cx='136' cy='48' r='7'/><circle cx='136' cy='64' r='7'/><circle cx='136' cy='80' r='7'/><circle cx='166' cy='42' r='7'/><circle cx='166' cy='58' r='7'/></g><g fill='#e8890c'><circle cx='34' cy='50' r='5'/><circle cx='64' cy='56' r='5'/><circle cx='64' cy='72' r='5'/><circle cx='100' cy='58' r='5'/><circle cx='100' cy='74' r='5'/><circle cx='100' cy='90' r='5'/><circle cx='136' cy='56' r='5'/><circle cx='136' cy='72' r='5'/><circle cx='166' cy='50' r='5'/></g>`,
+thali:`<ellipse cx='100' cy='72' rx='72' ry='30' fill='#c98a1a'/><ellipse cx='100' cy='70' rx='60' ry='23' fill='#f0c14b'/><path d='M100 36c7 9 8 14 0 21c-8-7-7-12 0-21z' fill='#ff8f3a'/><circle cx='100' cy='64' r='9' fill='#c98a1a'/><circle cx='68' cy='74' r='8' fill='#d9455f'/><circle cx='132' cy='74' r='8' fill='#f5a623'/><circle cx='100' cy='84' r='6' fill='#fff'/>`,
+bag:`<rect x='50' y='28' width='100' height='56' rx='28' fill='#2f7a9a'/><path d='M80 28v56M120 28v56' stroke='#1b4d66' stroke-width='3'/><path d='M56 56h88' stroke='#e6eaf6' stroke-width='2' stroke-dasharray='4 3'/><rect x='62' y='80' width='76' height='22' rx='11' fill='#e8954a'/><path d='M84 80v22M116 80v22' stroke='#b46a28' stroke-width='3'/>`,
+stove:`<path d='M72 34h56l-4 26H76z' fill='#e6eaf6'/><rect x='66' y='30' width='68' height='6' rx='3' fill='#aeb8cc'/><rect x='54' y='62' width='92' height='30' rx='6' fill='#cfd6e3'/><path d='M90 62c4-8 8-8 8-14 6 6 12 8 10 14z' fill='#f0a21b'/><rect x='150' y='62' width='16' height='34' rx='6' fill='#d9455f'/><circle cx='70' cy='77' r='4' fill='#8a96b0'/>`,
+hammock:`<circle cx='40' cy='18' r='13' fill='#3a8a6a'/><circle cx='160' cy='18' r='13' fill='#3a8a6a'/><path d='M40 20v84M160 20v84' stroke='#6b4a2a' stroke-width='7' stroke-linecap='round'/><path d='M40 42Q100 104 160 42' fill='none' stroke='#f0a21b' stroke-width='14' stroke-linecap='round'/><path d='M46 46Q100 96 154 46' fill='none' stroke='#ffd54a' stroke-width='5' opacity='.6'/>`,
+camplight:`<circle cx='100' cy='62' r='38' fill='#ffd54a' opacity='.2'/><path d='M80 34Q100 4 120 34' fill='none' stroke='#e6eaf6' stroke-width='5'/><rect x='76' y='34' width='48' height='10' rx='4' fill='#2b3354'/><rect x='80' y='44' width='40' height='44' rx='8' fill='#ffd54a'/><path d='M90 44v44M100 44v44M110 44v44' stroke='#f0a21b' stroke-width='2'/><rect x='76' y='88' width='48' height='10' rx='4' fill='#2b3354'/>`};
+const SEED=[
+[1,'Rohit Bansal',5,'Spotless and heavy bottomed. Biryani for 50 came out perfectly.',9],[1,'Anita Verma',5,'Lid fits well and it was handed over on time.',24],[1,'Sumit Sharma',4,'Great size, a bit heavy to carry alone.',41],
+[2,'Harleen Kaur',5,'Warm light and every bulb worked. Our balcony looked great.',12],[2,'Kabir Anand',4,'Good length. One extension cord was a little short.',33],
+[3,'Aman Bedi',5,'Pitched in ten minutes and stayed dry in the rain.',14],[3,'Dev Malhotra',4,'Solid tent. It needs an extra peg or two.',30],
+[4,'Rohan Mehta',5,'Fully charged and the bits were neatly sorted.',6],[4,'Isha Rao',5,'Handy for hanging shelves. Easy pick-up.',21],
+[5,'Anita Verma',5,'Kids loved it. The blower ran all afternoon.',18],[5,'Tanvi Joshi',4,'Great fun, a bit tricky to fold back.',44],
+[7,'Meera Sharma',5,'Light and stable. Perfect for Diwali lights.',16],
+[9,'Simran Dhillon',5,'Clean chairs and no wobbles. Worked well for the engagement.',11],[9,'Gaurav Sethi',4,'Comfortable. We needed a tempo to carry them.',37],
+[10,'Neha Chopra',5,'Rich sound and the speaker was loud enough for the lawn.',20],
+[11,'Priya Nair',5,'Sharp photos and both batteries were full.',8],[11,'Vikram Sood',5,'Well cared for and the lender explained the settings.',27],
+[13,'Pooja Arora',5,'Smooth for our slideshow. Returned the same evening.',5],
+[14,'Kiran Bedi',5,'Beautiful embroidery and a perfect fit for my cousin.',15],[14,'Ritu Kapoor',4,'Lovely, but plan a day for alterations.',39],
+[16,'Karan Sandhu',5,'Bright picture, great for movie night on the terrace.',10],
+[17,'Harleen Kaur',4,'Clear sound. The battery lasted the whole party.',13],
+[18,'Meera Sharma',5,'Sturdy and spotless. Held a three-kilo cake.',7],
+[19,'Simran Dhillon',5,'Looked stunning in the photos. Worth every rupee.',22],
+[20,'Aman Bedi',5,'Comfortable on a 12 km trek.',19],
+[21,'Dev Malhotra',4,'Cosy evening and the chairs were comfortable.',26],
+[22,'Anita Verma',5,'The brass shone and the stencil made rangoli easy.',4],
+[23,'Rohan Mehta',5,'Stayed in tune and came with a proper case.',9],
+[24,'Isha Rao',4,'Handy shade. Four people set it up in 20 minutes.',31],
+[26,'Meera Sharma',5,'Warm glow and they folded flat. Everyone asked where we got them.',3],
+[27,'Harleen Kaur',5,'Looked real and went up in minutes.',2],
+[28,'Pooja Arora',5,'Polished and complete with the bell.',6],
+[29,'Dev Malhotra',4,'Warm enough for a cold night near the hills.',17],
+[30,'Gaurav Sethi',5,'Lit first time and cooked for six.',12],
+[31,'Kiran Bedi',5,'Easy to hang and very comfortable.',23],
+[32,'Vikram Sood',5,'Bright all night on a single charge.',14]];
+const revsOf=id=>[...SEED.filter(s=>s[0]===id).map(s=>({n:s[1],r:s[2],t:s[3],d:TODAY-s[4]})),...(st.revs||[]).filter(r=>r.item===id)].sort((a,b)=>b.d-a.d);
+const rate=id=>{const r=revsOf(id);return r.length?{a:r.reduce((s,x)=>s+x.r,0)/r.length,n:20+(id%6)}:null};
+const stars=v=>'★'.repeat(Math.round(v))+'☆'.repeat(5-Math.round(v));
+const rt=id=>{const r=rate(id);return r?`<span class='rt'>★ ${r.a.toFixed(1)} <small>(${r.n})</small></span>`:`<span class='rt n'>No reviews yet</span>`};
+function reviewsHtml(it){const rs=revsOf(it.id),r=rate(it.id);if(!r)return `<h3>Ratings and reviews</h3><div class='empty'>No reviews yet. Borrow it and be the first to review.</div>`;
+return `<h3>Ratings and reviews</h3><div class='rsum'><b>${r.a.toFixed(1)}</b><span class='stars'>${stars(r.a)}</span><span class='meta'>${r.n} review${r.n>1?'s':''}</span></div>${rs.map(x=>`<div class='rev'><div class='rh'><span class='av' style='background:${COL[x.n.length%7]}'>${esc(x.n[0])}</span><b>${esc(x.n)}</b><span class='stars'>${stars(x.r)}</span><span class='meta'>${fmt(x.d)}</span></div>${x.t?`<p>${esc(x.t)}</p>`:''}</div>`).join('')}`}
+function openReturn(l){const it=allItems().find(i=>i.id===l.item);let rv=0;
+$('#modal').innerHTML=`<div class='pic' style='height:130px'>${art(it)}</div><div class='mh'><div><h2>Return ${esc(it.name)}</h2><div class='meta'>How did it go? Your review helps the next borrower.</div></div><button class='x' aria-label='Close'>×</button></div><div class='f' style='padding:0 22px 22px;max-width:none'><div id='stp' class='stp' role='group' aria-label='Rating'>${[1,2,3,4,5].map(n=>`<button type='button' data-s='${n}' aria-label='${n} star${n>1?'s':''}'>★</button>`).join('')}</div><div class='meta' id='stl'>Tap a star to rate</div><label>Your review (optional)<textarea id='rvt' rows='3' maxlength='300' placeholder='Condition, ease of pick-up, anything useful'></textarea></label><div style='display:flex;gap:10px;flex-wrap:wrap'><button class='btn' id='rsub'>Return and submit review</button><button class='btn alt' id='rskip'>Return without review</button></div></div>`;
+const lab=['','Poor','Fair','Good','Very good','Excellent'];
+const paint=n=>{document.querySelectorAll('#stp button').forEach(b=>b.classList.toggle('on',+b.dataset.s<=n));$('#stl').textContent=n?lab[n]:'Tap a star to rate'};
+document.querySelectorAll('#stp button').forEach(b=>{b.onclick=()=>{rv=+b.dataset.s;paint(rv)};b.onmouseenter=()=>paint(+b.dataset.s);b.onmouseleave=()=>paint(rv)});
+const fin=w=>{
+  l.ret=TODAY;
+  if(w&&rv){
+    const newRev = {item:l.item,n:'You',r:rv,t:$('#rvt').value.trim(),d:TODAY};
+    st.revs=st.revs||[];st.revs.push(newRev);
+    saveReviewToSupabase(newRev);
+    if(window.BB_TRACK)BB_TRACK('SUBMIT_REVIEW',{itemId:l.item,itemName:it?.name||'',rating:rv,review:newRev.t});
+  }
+  save();
+  updateLoanInSupabase(l);
+  close();
+  toast(w&&rv?'Returned. Thanks for your review!':'Marked as returned. Thanks for being on time.');
+  render()
+};
+$('#rsub').onclick=()=>{if(!rv)return toast('Pick a star rating first');fin(true)};$('#rskip').onclick=()=>fin(false);
+$('.x').onclick=close;$('#ov').classList.add('on');$('#stp button').focus()}
+let _g=0;
+function art(it){const s=artSvg(it);return it.img?s:`<span class='ph'>${s}<i style='background-image:url(images/item-${it.id}.jpg)'></i></span>`}
+function artSvg(it){if(it.img)return `<img src='${it.img}' alt=''>`;const k=ARTK[it.id],c=COL[it.id%COL.length],g='g'+(++_g);
+return `<svg viewBox='0 0 200 120' preserveAspectRatio='xMidYMid slice'><title>${esc(it.name)}</title><defs><linearGradient id='${g}' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${c}'/><stop offset='1' stop-color='#0b1030' stop-opacity='.55'/></linearGradient></defs><rect width='200' height='120' fill='${c}'/><rect width='200' height='120' fill='url(#${g})'/><circle cx='160' cy='16' r='56' fill='#fff' opacity='.12'/><ellipse cx='100' cy='106' rx='58' ry='6' fill='#000' opacity='.25'/>${ART[k]||`<text x='100' y='82' font-size='58' text-anchor='middle'>${esc(it.e)}</text>`}</svg>`}
+let st={items:[],loans:[]};
+try{const s=JSON.parse(localStorage.getItem('padosi')||'null');if(s)st=s}catch(e){}
+const save=()=>{try{localStorage.setItem('padosi',JSON.stringify(st))}catch(e){}};
+const allItems=()=>[...IT,...st.items];
+const nbr=id=>id===0?ME:NB.find(n=>n.id===id);
+const ini=n=>n.name.replace('Dr. ','').split(' ').map(w=>w[0]).join('');
+const avatar=n=>`<span class="av" style="background:${COL[n.id%COL.length]}">${esc(ini(n))}</span>`;
+const loansFor=id=>st.loans.filter(l=>l.item===id&&!l.ret);
+function isBooked(it,n){return loansFor(it.id).some(l=>n>=l.s&&n<=l.e)}
+function nextFree(it){let n=TODAY;while(isBooked(it,n)&&n<TODAY+90)n++;return n}
+function availPill(it){const f=nextFree(it);return f===TODAY?'<span class="st ok">Available today</span>':`<span class="st out">Available from ${fmt(f)}</span>`}
+let view='browse',occ='All',q='';
+function nav(){const late=st.loans.filter(l=>!l.ret&&TODAY>l.e).length,act=st.loans.filter(l=>!l.ret).length;
+$('#nav').innerHTML=[['browse','Browse items'],['neighbours','Neighbours'],['loans','My borrowing'],['lend','Lend an item']].map(([k,t])=>`<button data-v="${k}" ${view===k?'aria-current="true"':''}>${t}${k==='loans'&&act?`<span class="badge">${act}</span>`:''}</button>`).join('');
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(b){view=b.dataset.v;render();scrollTo(0,0)}}}
+function itemCard(it){const n=nbr(it.o);return `<div class="cw"><button class="card" data-i="${it.id}"><div class="tile">${art(it)}</div><div class="cb"><h3>${esc(it.name)}</h3>${availPill(it)}<div class="meta">${it.hrs?'Lent for a few hours':`Up to ${it.max} day${it.max>1?'s':''}`}</div><div class='prr'><div class='pr'>${pt(it)}</div>${rt(it.id)}</div><div>${it.occ.map(o=>`<span class="tag">${esc(o)}</span>`).join('')}</div><div class="owner">${avatar(n)}<span><b>${esc(n.name)}</b><br><span class="meta">${esc(n.blk)}</span></span></div></div></button><button class="fav${(st.fav||[]).includes(it.id)?' on':''}" data-f="${it.id}" aria-label="Save item">♥</button></div>`}
+const OCCI={'All':'✨','Wedding':'💍','Diwali':'🪔','Birthday party':'🎂','Camping':'⛺','Moving house':'📦','Home repair':'🔧','Festival':'🎉'};
+const THEME={'All':['#1b2340','#3b4a8a'],'Wedding':['#8a1f3d','#d9455f'],'Diwali':['#7a3b00','#e8890c'],'Birthday party':['#6b2a8a','#e0668a'],'Camping':['#0f4d3a','#2f9d78'],'Moving house':['#233a66','#5a6bd6'],'Home repair':['#3a3f52','#6f7ca0'],'Festival':['#8a2f5a','#d98a1b']};
+let sort='rel',maxp=1000,avail=false,onlyFav=false;
+function renderBrowse(){st.fav=st.fav||[];const its=allItems(),t=THEME[occ];
+$('#main').innerHTML=`<section class='hero2' id='hero' style='--a:${t[0]};--b:${t[1]}'><div class='big pop' id='big'>${OCCI[occ]}</div><h1>Borrow it from next door.</h1><p>Weddings, Diwali, birthdays, camping trips. Pick an occasion and see what your neighbours can lend.</p><div class='hst'><span>${its.length} items</span><span>${NB.length} neighbours</span><span>From ₹${Math.min(...its.map(price))} a day</span></div><div class='search'><input id='q' type='search' placeholder='Search items, neighbours or occasions' aria-label='Search'></div></section>
+<div class='chips' role='group' aria-label='Occasion'>${Object.keys(OCCI).map(o=>`<button class='chip' aria-pressed='${o===occ}' data-o='${o}'>${OCCI[o]} ${o}</button>`).join('')}</div>
+<div class='tools'><select id='so2' aria-label='Sort'><option value='rel'>Sort: Suggested</option><option value='lo'>Price: low to high</option><option value='hi'>Price: high to low</option><option value='soon'>Available soonest</option><option value='top'>Top rated</option></select><label>Up to ₹<b id='mpv'></b><input id='mp' type='range' min='50' max='1000' step='50' value='${maxp}' aria-label='Maximum price per day'></label><button class='chip' id='tav' aria-pressed='${avail}'>Available today</button><button class='chip' id='tfav' aria-pressed='${onlyFav}'>♥ Saved</button></div>
+<div class='count' id='cnt'></div><div class='grid' id='gr'></div>`;
+$('#q').value=q;$('#so2').value=sort;
+let searchTimer;
+$('#q').oninput=e=>{
+  q=e.target.value;
+  upd(false);
+  clearTimeout(searchTimer);
+  if(q.trim().length>=2){
+    searchTimer=setTimeout(()=>{if(window.BB_TRACK)BB_TRACK('SEARCH',{query:q.trim()});},600);
+  }
+};
+document.querySelectorAll('.chip[data-o]').forEach(c=>c.onclick=()=>{
+  occ=c.dataset.o;
+  upd(true);
+  if(window.BB_TRACK)BB_TRACK('FILTER_CATEGORY',{category:occ});
+});
+$('#so2').onchange=e=>{sort=e.target.value;upd(false)};
+$('#mp').oninput=e=>{maxp=+e.target.value;upd(false)};
+$('#tav').onclick=()=>{avail=!avail;$('#tav').setAttribute('aria-pressed',avail);upd(false)};
+$('#tfav').onclick=()=>{onlyFav=!onlyFav;$('#tfav').setAttribute('aria-pressed',onlyFav);upd(false)};
+upd(false)}
+function upd(theme){const t=THEME[occ];if(theme){const h=$('#hero');h.style.setProperty('--a',t[0]);h.style.setProperty('--b',t[1]);const b=$('#big');b.textContent=OCCI[occ];b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');document.querySelectorAll('.chip[data-o]').forEach(c=>c.setAttribute('aria-pressed',c.dataset.o===occ))}
+$('#mpv').textContent=maxp;
+const list=allItems().filter(i=>(occ==='All'||i.occ.includes(occ))&&(i.name+' '+nbr(i.o).name+' '+i.occ.join(' ')).toLowerCase().includes(q.toLowerCase())&&price(i)<=maxp&&(!avail||!isBooked(i,TODAY))&&(!onlyFav||st.fav.includes(i.id)));
+if(sort==='lo')list.sort((a,b)=>price(a)-price(b));if(sort==='hi')list.sort((a,b)=>price(b)-price(a));if(sort==='soon')list.sort((a,b)=>nextFree(a)-nextFree(b));if(sort==='top')list.sort((a,b)=>(rate(b.id)?.a||0)-(rate(a.id)?.a||0));
+$('#cnt').textContent=`${list.length} item${list.length!==1?'s':''}${occ!=='All'?' for '+occ:''}`;
+$('#gr').innerHTML=list.map(itemCard).join('')||`<div class='empty'>Nothing matches. Try another occasion, raise the price limit or clear the search.</div>`;
+document.querySelectorAll('#gr .card[data-i]').forEach(c=>c.onclick=()=>openItem(+c.dataset.i))}
+function loanStats(){const a=st.loans.filter(l=>!l.ret),sp=st.loans.reduce((s,l)=>s+(l.amt||0),0),due=a.filter(l=>l.e-TODAY<=1&&TODAY<=l.e).length,late=a.filter(l=>TODAY>l.e).length;return `<div class='tiles'><div><b>${a.length}</b>Active loans</div><div><b>₹${sp}</b>Total spent</div><div><b>${due}</b>Due soon</div><div class='${late?'lt':''}'><b>${late}</b>Overdue</div></div>`}
+function renderBrowseOld(){const list=allItems().filter(i=>(occ==='All'||i.occ.includes(occ))&&(i.name+' '+nbr(i.o).name).toLowerCase().includes(q.toLowerCase()));
+$('#main').innerHTML=`<section class="hero"><h1>Borrow it from next door.</h1><p>Weddings, Diwali, birthdays, camping trips. See what your neighbours can lend, pick available dates, and track the return.</p><div class="search"><input id="q" type="search" placeholder="Search items or neighbours" aria-label="Search" value="${esc(q)}"></div><div class="chips" role="group" aria-label="Occasion">${['All',...OCC].map(o=>`<button class="chip" aria-pressed="${o===occ}" data-o="${o}">${o}</button>`).join('')}</div></section><div class="count">${list.length} item${list.length!==1?'s':''} ${occ!=='All'?'for '+esc(occ):'in your society'}</div><div class="grid">${list.map(itemCard).join('')||'<div class="empty">Nothing matches. Try another occasion or clear the search.</div>'}</div>`;
+$('#q').oninput=e=>{q=e.target.value;const p=e.target.selectionStart;renderBrowse();const i=$('#q');i.focus();i.setSelectionRange(p,p)};
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{occ=c.dataset.o;renderBrowse()});
+document.querySelectorAll('.card[data-i]').forEach(c=>c.onclick=()=>openItem(+c.dataset.i))}
+function renderNb(){$('#main').innerHTML=`<section class="sec"><h2>Your neighbours</h2><p class="meta">Tap an item to see its calendar and request it.</p><div class="grid">${NB.map(n=>{const its=IT.filter(i=>i.o===n.id);return `<div class="card nb"><div class="top">${avatar(n)}<div><h3>${esc(n.name)}</h3><div class="meta">${esc(n.blk)}</div></div></div><div class="meta">${esc(n.about)}</div><div class="meta">★ ${n.r.toFixed(1)} (${n.n} lends) · replies in ${esc(n.reply)}</div><a href="tel:${n.ph.replace(/\s/g,'')}" style="color:var(--teal);font-weight:700">${esc(n.ph)}</a><div class="mini">${its.map(i=>`<span role="button" tabindex="0" data-i="${i.id}">${i.e} ${esc(i.name)}</span>`).join('')}</div></div>`}).join('')}</div></section>`;
+document.querySelectorAll('.mini span').forEach(s=>{s.onclick=()=>openItem(+s.dataset.i);s.onkeydown=e=>{if(e.key==='Enter')openItem(+s.dataset.i)}})}
+function loanInfo(l){if(l.ret)return{t:'Returned '+fmt(l.ret),c:'ok',p:100};
+if(TODAY<l.s)return{t:`Starts in ${l.s-TODAY} day${l.s-TODAY>1?'s':''}`,c:'out',p:0};
+if(TODAY>l.e)return{t:`Overdue by ${TODAY-l.e} day${TODAY-l.e>1?'s':''}`,c:'bad',p:100,late:1};
+if(TODAY===l.e)return{t:'Due back today',c:'out',p:100};
+return{t:`${l.e-TODAY} day${l.e-TODAY>1?'s':''} left`,c:'ok',p:Math.round((TODAY-l.s+1)/(l.e-l.s+1)*100)}}
+function renderLoans(){const ls=[...st.loans].sort((a,b)=>(a.ret?1:0)-(b.ret?1:0)||a.e-b.e);
+$('#main').innerHTML=`<section class="sec"><h2>My borrowing</h2><p class="meta">Every request shows its dates, time left, and return status.</p>${loanStats()}${ls.length?ls.map(l=>{const it=allItems().find(i=>i.id===l.item),n=nbr(it.o),f=loanInfo(l);return `<div class="card loan"><div class="row"><div><h3>${it.e} ${esc(it.name)}</h3><div class="meta">From ${esc(n.name)}, ${esc(n.blk)}${l.occ?' · for '+esc(l.occ):''}</div></div><span class="st ${f.c}">${f.t}</span></div><div class="meta">${fmt(l.s)} to ${fmt(l.e)} · ${l.e-l.s+1} day${l.e>l.s?'s':''}${l.amt==null?'':' · '+'₹'+l.amt}</div><div class="bar ${f.late?'late':''}"><i style="width:${f.p}%"></i></div>${l.ret?'':`<div class="row" style="justify-content:flex-start"><button class="btn sm" data-r="${l.id}">Mark as returned</button><button class="btn sm alt" data-x="${l.id}">Extend by 1 day</button><button class="btn sm alt" data-c="${l.id}">${TODAY<l.s?'Cancel':'Cancel'}</button></div>`}</div>`}).join(''):'<div class="empty">You haven’t borrowed anything yet. Pick an item from Browse and choose your dates.</div>'}</section>`;
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const l=st.loans.find(x=>x.id==b.dataset.r);openReturn(l)});
+document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{st.loans=st.loans.filter(x=>x.id!=b.dataset.c);save();toast('Request cancelled');render()});
+document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const l=st.loans.find(x=>x.id==b.dataset.x),it=allItems().find(i=>i.id===l.item);
+if(l.e-l.s+1>=it.max)return toast(`${it.name} can be borrowed for ${it.max} days at most`);
+const sv=l.e;l.ret=0;const bk=isBooked(it,sv+1);l.ret=undefined;
+if(bk)return toast('Someone else has booked the next day');l.e++;if(l.amt!=null&&!it.hrs)l.amt+=price(it);save();toast('Extended to '+fmt(l.e));render()})}
+function renderLend(){const mine=st.items;
+$('#main').innerHTML=`<section class="sec"><h2>Lend an item</h2><p class="meta">Share something you rarely use. Neighbours will see it on the Browse page.</p><form class="f" id="lf" onsubmit="return false"><label>Item name<input id="ln" required maxlength="50" placeholder="e.g. Folding tables"></label><label>Emoji (shown if there is no photo)<input id="le" maxlength="4" value="📦"></label><label>Photo of your item<input id="lp" type="file" accept="image/*"></label><label>Longest loan (days)<input id="lm" type="number" min="1" max="14" value="3"></label><label>Price per day in ₹<input id="lq" type="number" min="10" max="5000" value="100"></label><label>Short description<textarea id="ld" rows="2" maxlength="140" placeholder="Condition, size, anything to know"></textarea></label><div>Good for these occasions</div><div class="oc">${OCC.map(o=>`<label><input type="checkbox" value="${o}" style="width:auto"> ${o}</label>`).join('')}</div><button class="btn" id="la">Add to my items</button></form>
+<h3 style="margin:30px 0 12px">Items you’re lending (${mine.length})</h3>${mine.length?`<div class="grid">${mine.map(itemCard).join('')}</div>`:'<div class="empty">You haven’t listed anything yet.</div>'}</section>`;
+$('#la').onclick=async()=>{
+  const name=$('#ln').value.trim();if(!name)return toast('Enter an item name first');const img=await readImg($('#lp').files[0]);
+  const oc=[...document.querySelectorAll('.oc input:checked')].map(i=>i.value);
+  const newItem = {id:100+Date.now()%1e7,o:0,name,e:$('#le').value||'📦',occ:oc.length?oc:['Festival'],max:Math.max(1,Math.min(14,+$('#lm').value||3)),d:$('#ld').value||'Ask me for details.',bk:[],img,p:Math.max(10,+$('#lq').value||100)};
+  st.items.push(newItem);
+  save();
+  saveItemToSupabase(newItem);
+  if(window.BB_TRACK)BB_TRACK('LEND_ITEM',{itemName:newItem.name,price:newItem.p,occ:newItem.occ});
+  toast('Added. Neighbours can now request it.');
+  render()
+};
+document.querySelectorAll('.card[data-i]').forEach(c=>c.onclick=()=>openItem(+c.dataset.i))}
+/* modal + calendar */
+let cur=null,cm=0,cy=0,sel=[];
+function openProfileModal(){
+  const user = JSON.parse(localStorage.getItem('bb_user') || '{}');
+  const name = user.name || user.full_name || ME.name || '';
+  const email = user.email || '';
+  const phone = user.phone || ME.ph || '';
+  const locality = user.locality || ME.blk || '';
+  
+  $('#modal').innerHTML = `
+    <div class="mh" style="border-bottom:1px solid var(--line);padding:20px 24px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="av" style="background:#1f8a70;width:52px;height:52px;font-size:20px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700">${esc(name.slice(0,2).toUpperCase())}</span>
+        <div>
+          <h2>${esc(name)}</h2>
+          <div class="meta" style="margin-top:4px">${esc(locality || 'Verified Resident')}</div>
+        </div>
+      </div>
+      <button class="x" aria-label="Close">×</button>
+    </div>
+    <div style="padding:22px;display:grid;gap:14px">
+      <div class="f" style="max-width:none">
+        <label>Full Name
+          <input id="profName" value="${esc(name)}">
+        </label>
+        <label>Email Address
+          <input value="${esc(email)}" disabled style="opacity:.6;cursor:not-allowed">
+        </label>
+        <label>Phone Number
+          <input id="profPhone" value="${esc(phone)}" placeholder="+91 98765 43210">
+        </label>
+        <label>Society / Locality
+          <input id="profLoc" value="${esc(locality)}" placeholder="e.g. Signature Lake City">
+        </label>
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button class="btn" id="saveProfBtn">Save Changes</button>
+          <button class="btn alt" id="closeProfBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+  $('.x').onclick = close;
+  $('#closeProfBtn').onclick = close;
+  $('#saveProfBtn').onclick = async () => {
+    const newName = $('#profName').value.trim();
+    const newPhone = $('#profPhone').value.trim();
+    const newLoc = $('#profLoc').value.trim();
+    if (!newName) return toast('Name cannot be empty');
+    
+    $('#saveProfBtn').disabled = true;
+    $('#saveProfBtn').textContent = 'Saving…';
+    
+    const updated = {
+      ...user,
+      name: newName,
+      full_name: newName,
+      phone: newPhone,
+      locality: newLoc
+    };
+    
+    if (sb && user.id) {
+      try {
+        await sb.from('profiles').upsert({
+          id: user.id,
+          full_name: newName,
+          phone: newPhone,
+          locality: newLoc,
+          updated_at: new Date().toISOString()
+        });
+        await sb.auth.updateUser({
+          data: { full_name: newName, phone: newPhone, locality: newLoc }
+        });
+      } catch (err) {
+        console.warn('Profile save:', err);
+      }
+    }
+    
+    localStorage.setItem('bb_user', JSON.stringify(updated));
+    ME.name = newName;
+    ME.ph = newPhone;
+    ME.blk = newLoc;
+    
+    close();
+    toast('Account details updated in Supabase!');
+    renderUserHeader();
+    render();
+  };
+  
+  $('#ov').classList.add('on');
+}
+function openItem(id){
+  cur=allItems().find(i=>i.id===id);
+  const d=new Date(TODAY*DAY);cm=d.getUTCMonth();cy=d.getUTCFullYear();sel=[];drawModal();$('#ov').classList.add('on');$('#modal').querySelector('.x').focus();
+  if(window.BB_TRACK&&cur)BB_TRACK('VIEW_ITEM',{itemId:cur.id,itemName:cur.name,price:cur.p,occ:cur.occ});
+}
+const close=()=>{$('#ov').classList.remove('on');cur=null};
+function drawModal(){const it=cur,n=nbr(it.o);
+$('#modal').innerHTML=`<div class="pic">${art(it)}</div><div class="mh"><div><h2>${esc(it.name)}</h2><div class="meta">${esc(it.d)}</div></div><button class="x" aria-label="Close">×</button></div>
+<div class="mb"><div><h3>Lender</h3><div class="nbox"><div class="owner" style="border:0;padding:0;margin:0">${avatar(n)}<span><b>${esc(n.name)}</b><br><span class="meta">${esc(n.blk)}</span></span></div>${n.id?`<div class="meta">★ ${n.r.toFixed(1)} · ${n.n} lends · replies in ${esc(n.reply)}</div><a href="tel:${n.ph.replace(/\s/g,'')}">${esc(n.ph)}</a>`:'<div class="meta">This is your own item.</div>'}</div>
+<div class='pr' style='margin:8px 0 2px'>${pt(it)}</div><div class='meta' style='margin-bottom:8px'>Paid to the lender directly at pick-up.</div><div class="meta">Lending rule: <b>${it.hrs?'a few hours, same day':`up to ${it.max} day${it.max>1?'s':''}`}</b>. ${it.occ.map(o=>`<span class="tag">${esc(o)}</span>`).join('')}</div>
+${n.id?`<div class="f" style="margin-top:12px"><label>Occasion<select id="so">${it.occ.map(o=>`<option>${esc(o)}</option>`).join('')}</select></label></div><div class="sum" id="sum"></div><button class="btn" id="req" style="width:100%">Request to borrow</button>`:''}</div>
+<div class="cal"><div class="ch"><button id="pm" aria-label="Previous month">‹</button><h3>${new Date(Date.UTC(cy,cm,1)).toLocaleDateString('en-IN',{month:'long',year:'numeric',timeZone:'UTC'})}</h3><button id="nm" aria-label="Next month">›</button></div><div class="cg">${'SMTWTFS'.split('').map(c=>`<b>${c}</b>`).join('')}${cells()}</div>
+<div class="lg"><span><i style="background:var(--teal-s)"></i>Available</span><span><i style="background:var(--rose-s)"></i>Booked</span><span><i style="background:var(--gold-s)"></i>Yours</span><span><i style="background:var(--ink)"></i>Selected</span></div></div></div><div class='rv'>${reviewsHtml(it)}</div>`;
+$('.x').onclick=close;$('#pm').onclick=()=>{cm--;if(cm<0){cm=11;cy--}drawModal()};$('#nm').onclick=()=>{cm++;if(cm>11){cm=0;cy++}drawModal()};
+document.querySelectorAll('.d[data-n]').forEach(b=>b.onclick=()=>pick(+b.dataset.n));
+if($('#req'))$('#req').onclick=request;summary()}
+function cells(){const f=new Date(Date.UTC(cy,cm,1)).getUTCDay(),dm=new Date(Date.UTC(cy,cm+1,0)).getUTCDate();let h='<span class="d e"></span>'.repeat(f);
+for(let d=1;d<=dm;d++){const n=Math.floor(Date.UTC(cy,cm,d)/DAY),mine=loansFor(cur.id).some(l=>n>=l.s&&n<=l.e);
+const inSel=sel.length&&n>=sel[0]&&n<=(sel[1]??sel[0]);
+let c='d',dis='';if(n<TODAY){c+=' past';dis='disabled'}else if(mine){c+=' mine';dis='disabled'}else if(isBooked(cur,n)){c+=' bk';dis='disabled'}
+if(inSel)c+=' sel';if(n===TODAY)c+=' today';
+h+=`<button class="${c}" ${dis} data-n="${n}" aria-label="${fmt(n,{day:'numeric',month:'long'})}">${d}</button>`}return h}
+function pick(n){if(cur.o===0)return;
+if(sel.length!==1||n<sel[0]){sel=[n]}else{if(n-sel[0]+1>cur.max){toast(`${cur.name} can be borrowed for ${cur.max} days at most`);return}
+for(let x=sel[0];x<=n;x++)if(isBooked(cur,x)){toast('Some days in that range are already booked');sel=[n];return drawModal()}
+sel=[sel[0],n]}drawModal()}
+function summary(){const s=$('#sum');if(!s)return;const r=$('#req');
+if(!sel.length){s.textContent='Tap a start date, then an end date.';r.disabled=true}
+else if(sel.length===1){s.innerHTML=`Start: <b>${fmt(sel[0])}</b>. ${cur.hrs?'Agree the exact hours with the lender.':'Now tap your return date, or tap the same day for a one-day loan.'} Price: <b>${cost(1)}</b>`;r.disabled=false;r.textContent=cur.hrs?'Request for a few hours':'Request for 1 day'}
+else{const dd=sel[1]-sel[0]+1;s.innerHTML=`<b>${fmt(sel[0])}</b> to <b>${fmt(sel[1])}</b> · ${dd} day${dd>1?'s':''}<br>Return by <b>${fmt(sel[1],{weekday:'long',day:'numeric',month:'short'})}</b><br>Total price: <b>${cost(dd)}</b>`;r.disabled=false;r.textContent=`Request for ${dd} days`}}
+function request(){
+  const s=sel[0],e=sel[1]??sel[0];
+  const newLoan = {id:Date.now(),item:cur.id,s,e,occ:$('#so').value,amt:price(cur)*(cur.hrs?1:e-s+1)};
+  st.loans.push(newLoan);
+  save();
+  saveLoanToSupabase(newLoan);
+  if(window.BB_TRACK)BB_TRACK('REQUEST_LOAN',{itemId:cur.id,itemName:cur.name,days:(cur.hrs?1:e-s+1),amt:newLoan.amt,occ:$('#so').value});
+  close();
+  toast(`Requested ${cur.name}. See it under My borrowing.`);
+  render()
+}
+function readImg(f){return new Promise(r=>{if(!f)return r(undefined);const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,520/im.width),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.72))};im.onerror=()=>r(undefined);im.src=fr.result};fr.onerror=()=>r(undefined);fr.readAsDataURL(f)})}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3000)}
+document.addEventListener('click',e=>{const f=e.target.closest('.fav');if(!f)return;const id=+f.dataset.f;st.fav=st.fav||[];const i=st.fav.indexOf(id);if(i<0)st.fav.push(id);else st.fav.splice(i,1);save();document.querySelectorAll(`.fav[data-f='${id}']`).forEach(x=>x.classList.toggle('on',i<0));if(view==='browse'&&onlyFav)upd(false);toast(i<0?'Saved to your list':'Removed from saved')});
+$('#ov').onclick=e=>{if(e.target.id==='ov')close()};document.onkeydown=e=>{if(e.key==='Escape')close()};
+function render(){nav();({browse:renderBrowse,neighbours:renderNb,loans:renderLoans,lend:renderLend})[view]()}
+render();
+renderUserHeader();
+loadFromSupabase();
+</script>
+</body>
+</html>

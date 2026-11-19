@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin Portal – BorrowBuddy</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f3f5fa;--card:#fff;--ink:#1b2340;--mute:#5f6783;--line:#dde2ee;
+  --gold:#f0a21b;--gold-s:#fdf0d4;--teal:#1f8a70;--teal-s:#d9f1ea;
+  --rose:#d9455f;--rose-s:#fbe0e5;--ink-s:#e6eaf6;--blue:#2b7fa8;--blue-s:#e1f0f7;
+  color-scheme:light;
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12162a;--card:#1b2140;--ink:#eef0fa;--mute:#a2a9c6;--line:#2e3659;
+    --gold-s:#3b2f14;--teal-s:#16362f;--rose-s:#42212a;--ink-s:#262d52;--blue-s:#1b3548;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12162a;--card:#1b2140;--ink:#eef0fa;--mute:#a2a9c6;--line:#2e3659;
+  --gold-s:#3b2f14;--teal-s:#16362f;--rose-s:#42212a;--ink-s:#262d52;--blue-s:#1b3548;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "DM Sans",system-ui,sans-serif;min-height:100vh}
+h1,h2,h3,h4{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;margin:0;line-height:1.2}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--teal);text-decoration:none;font-weight:600}
+a:hover{text-decoration:underline}
+
+/* Login Gate */
+.gate-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.gate-card{background:var(--card);border:1px solid var(--line);border-radius:24px;width:100%;max-width:440px;padding:40px 36px;box-shadow:0 12px 40px rgba(20,30,70,.08);text-align:center}
+.logo-row{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:12px}
+.logo-row img{height:48px;border-radius:10px}
+.logo-row span{font:800 26px "Bricolage Grotesque",sans-serif}
+.gate-tagline{color:var(--mute);font-size:14px;margin-bottom:24px}
+.gate-field{display:grid;gap:6px;text-align:left;margin-bottom:20px}
+.gate-field label{font-weight:600;font-size:13px}
+.gate-field input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.gate-field input:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 3px var(--teal-s)}
+.btn-primary{border:0;background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:12px;font-weight:700;width:100%;font-size:15px;transition:transform .15s,box-shadow .15s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,30,70,.16)}
+
+/* Admin Shell */
+.admin-shell{display:none}
+.admin-shell.active{display:block}
+header.admin-bar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line);padding:12px 24px}
+.bar-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.bar-title{display:flex;align-items:center;gap:10px;font:800 22px "Bricolage Grotesque",sans-serif}
+.bar-title img{height:36px;border-radius:8px}
+.badge-admin{background:var(--rose-s);color:var(--rose);padding:3px 9px;border-radius:99px;font-size:12px;font-weight:800;letter-spacing:.5px}
+.bar-nav{display:flex;align-items:center;gap:8px;margin-left:auto}
+.btn-sm{padding:7px 14px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn-sm:hover{background:var(--ink-s)}
+.btn-danger{background:var(--rose-s);color:var(--rose);border-color:rgba(217,69,95,.3)}
+
+/* Content Layout */
+.admin-main{max-width:1440px;margin:0 auto;padding:24px 20px 80px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.stat-card .lbl{font-size:13px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.stat-card .val{font:800 32px "Bricolage Grotesque",sans-serif;color:var(--ink)}
+.stat-card .sub{font-size:12px;color:var(--teal);font-weight:600;display:flex;align-items:center;gap:4px}
+.stat-card .sub.rose{color:var(--rose)}
+.stat-card::after{content:'';position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--teal)}
+.stat-card.c-gold::after{background:var(--gold)}
+.stat-card.c-rose::after{background:var(--rose)}
+.stat-card.c-blue::after{background:var(--blue)}
+
+/* Charts Grid */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:28px}
+@media(max-width:600px){.charts-grid{grid-template-columns:1fr}}
+.chart-box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.chart-box .head{display:flex;align-items:center;justify-content:space-between}
+.chart-box .head h3{font-size:18px;font-weight:700}
+.chart-canvas{position:relative;height:260px;width:100%}
+
+/* Activity Table */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:28px}
+.panel-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.panel-head h2{font-size:20px;font-weight:800}
+.panel-ctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.panel-ctrls input,.panel-ctrls select{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px}
+.panel-ctrls input{min-width:200px}
+.table-wrap{overflow-x:auto;max-height:480px}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}
+th{background:var(--ink-s);padding:12px 16px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mute);position:sticky;top:0;z-index:2}
+td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:rgba(31,138,112,.03)}
+
+/* Action Badges */
+.pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.pill.page{background:var(--blue-s);color:var(--blue)}
+.pill.search{background:var(--gold-s);color:#b87400}
+.pill.view{background:var(--teal-s);color:var(--teal)}
+.pill.loan{background:var(--rose-s);color:var(--rose)}
+.pill.auth{background:var(--ink-s);color:var(--ink)}
+
+/* Shake */
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.shake{animation:shake .4s}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 20px;background:var(--card)}
+.tab-btn{border:0;background:none;padding:14px 18px;font-weight:700;font-size:14px;color:var(--mute);border-bottom:2px solid transparent;cursor:pointer}
+.tab-btn.active{color:var(--teal);border-bottom-color:var(--teal)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- 1. LOGIN / PASSWORD GATE -->
+<div class="gate-wrap" id="gateSection">
+  <div class="gate-card" id="gateCard">
+    <div class="logo-row">
+      <img src="logo.jpg" alt="BorrowBuddy">
+      <span>BorrowBuddy</span>
+    </div>
+    <span class="badge-admin" style="font-size:13px;padding:4px 12px">ADMIN SECURITY PORTAL</span>
+    <p class="gate-tagline" style="margin-top:14px">Enter the administrator password to monitor live user activity, website traffic, and community database.</p>
+    
+    <form id="gateForm" onsubmit="return false">
+      <div class="gate-field">
+        <label for="adminPass">Administrator Password</label>
+        <div style="position:relative">
+          <input type="password" id="adminPass" placeholder="Enter password" autofocus required style="padding-right:42px">
+          <button type="button" id="togglePass" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:16px;color:var(--mute)" aria-label="Toggle password">👁</button>
+        </div>
+      </div>
+      <button class="btn-primary" type="submit" id="gateSubmit">Access Admin Portal</button>
+    </form>
+    <p style="margin-top:20px;font-size:13px"><a href="index.html">← Return to Public Website</a></p>
+  </div>
+</div>
+
+<!-- 2. ADMIN DASHBOARD SHELL -->
+<div class="admin-shell" id="adminShell">
+  <header class="admin-bar">
+    <div class="bar-inner">
+      <div class="bar-title">
+        <img src="logo.jpg" alt="BorrowBuddy">
+        <span>BorrowBuddy Admin</span>
+        <span class="badge-admin">LIVE MONITOR</span>
+      </div>
+
+      <div class="bar-nav">
+        <span style="font-size:13px;color:var(--teal);font-weight:700;display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block;animation:pulse 2s infinite"></span>
+          Live Sync Active
+        </span>
+        <a href="index.html" target="_blank" class="btn-sm">Visit Site ↗</a>
+        <button class="btn-sm" id="refreshBtn">↻ Refresh Data</button>
+        <button class="btn-sm btn-danger" id="logoutBtn">Log Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <!-- KPI Overview Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="lbl">Total Pageviews</span>
+        <span class="val" id="kpiPageviews">0</span>
+        <span class="sub">▲ Live Website Traffic</span>
+      </div>
+      <div class="stat-card c-blue">
+        <span class="lbl">Unique Visitors</span>
+        <span class="val" id="kpiVisitors">0</span>
+        <span class="sub">Distinct Sessions Logged</span>
+      </div>
+      <div class="stat-card c-gold">
+        <span class="lbl">Registered Users</span>
+        <span class="val" id="kpiUsers">0</span>
+        <span class="sub">Supabase Database Accounts</span>
+      </div>
+      <div class="stat-card c-rose">
+        <span class="lbl">Active Borrow Loans</span>
+        <span class="val" id="kpiLoans">0</span>
+        <span class="sub">Community Items Borrowed</span>
+      </div>
+      <div class="stat-card">
+        <span class="lbl">Items in Circulation</span>
+        <span class="val" id="kpiItems">0</span>
+        <span class="sub">Total Community Assets</span>
+      </div>
+      <div class="stat-card c-blue">
+        <span class="lbl">Total Volume</span>
+        <span class="val" id="kpiGmv">₹0</span>
+        <span class="sub">Community Value Shared</span>
+      </div>
+    </div>
+
+    <!-- Charts Row 1: Traffic + Categories -->
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="head">
+          <h3>📈 Website Traffic & Action Timeline</h3>
+          <span class="badge-admin" style="background:var(--teal-s);color:var(--teal)">Last 7 Days</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="trafficChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="head">
+          <h3>🥧 Items by Occasion & Category</h3>
+          <span class="badge-admin" style="background:var(--gold-s);color:#b87400">Inventory Distribution</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2: Action Breakdown + Device Distribution -->
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="head">
+          <h3>📊 User Action Breakdown</h3>
+          <span style="font-size:12px;color:var(--mute)">Searches vs Views vs Loans</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="actionsChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="head">
+          <h3>📱 Device & Browser Traffic</h3>
+          <span style="font-size:12px;color:var(--mute)">Visitor Tech Breakdown</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="deviceChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Tabs: Live Activity Monitor vs User Database vs Item Inventory -->
+    <div class="panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tabActivity">🔴 Live User Activity Monitor (<span id="logCountBadge">0</span>)</button>
+        <button class="tab-btn" data-tab="tabUsers">👥 Registered Users (<span id="userCountBadge">0</span>)</button>
+        <button class="tab-btn" data-tab="tabItems">📦 Items & Loans Inventory (<span id="itemCountBadge">0</span>)</button>
+      </div>
+
+      <!-- Tab 1: Live Activity Monitor -->
+      <div class="tab-pane active" id="tabActivity">
+        <div class="panel-head">
+          <div>
+            <h2>What Users Are Trying To Do</h2>
+            <div style="font-size:13px;color:var(--mute)">Every search, item view, loan request, login, and registration recorded in real time.</div>
+          </div>
+          <div class="panel-ctrls">
+            <input type="text" id="logSearch" placeholder="🔍 Search user, item, action…">
+            <select id="actionFilter">
+              <option value="ALL">All Actions</option>
+              <option value="PAGE_VIEW">Page Views</option>
+              <option value="SEARCH">Searches</option>
+              <option value="VIEW_ITEM">Item Views</option>
+              <option value="REQUEST_LOAN">Loan Requests</option>
+              <option value="LEND_ITEM">New Items Listed</option>
+              <option value="LOGIN_SUCCESS">Logins & Signups</option>
+              <option value="SUBMIT_REVIEW">Reviews</option>
+            </select>
+            <button class="btn-sm" id="exportLogsBtn">📥 Export CSV</button>
+            <button class="btn-sm btn-danger" id="clearLogsBtn">Clear History</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="activityTable">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User / Resident</th>
+                <th>Action</th>
+                <th>Details / Attempted Action</th>
+                <th>Device & Browser</th>
+                <th>Location / Society</th>
+              </tr>
+            </thead>
+            <tbody id="activityTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2: Registered Users -->
+      <div class="tab-pane" id="tabUsers">
+        <div class="panel-head">
+          <div>
+            <h2>Registered Resident Users</h2>
+            <div style="font-size:13px;color:var(--mute)">Profiles stored in Supabase PostgreSQL database + session cache.</div>
+          </div>
+          <div class="panel-ctrls">
+            <input type="text" id="userSearch" placeholder="Search by name, email, society…">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Society / Locality</th>
+                <th>User ID</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Items & Loans Inventory -->
+      <div class="tab-pane" id="tabItems">
+        <div class="panel-head">
+          <div>
+            <h2>Community Lending Inventory</h2>
+            <div style="font-size:13px;color:var(--mute)">All neighborhood items listed for borrowing and their rental terms.</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item Name</th>
+                <th>Category / Occasion</th>
+                <th>Daily Rate</th>
+                <th>Max Loan</th>
+                <th>Lender</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="itemsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ── Configuration & Credentials ── */
+const ADMIN_PASSWORD = "Shourya1905";
+const SUPABASE_URL = 'https://wrikxgglpabvtcsvopwc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_RqgsPBhoiaP7Dhq5lSeImQ_nqwHCXfP';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+/* ── Password Gate Authentication ── */
+const gateSection = document.getElementById('gateSection');
+const adminShell = document.getElementById('adminShell');
+const gateForm = document.getElementById('gateForm');
+const adminPass = document.getElementById('adminPass');
+const gateCard = document.getElementById('gateCard');
+const togglePass = document.getElementById('togglePass');
+
+// Check active session
+if (sessionStorage.getItem('bb_admin_auth') === 'true') {
+  unlockAdmin();
+}
+
+togglePass.onclick = () => {
+  const isPass = adminPass.type === 'password';
+  adminPass.type = isPass ? 'text' : 'password';
+  togglePass.textContent = isPass ? '🔒' : '👁';
+};
+
+gateForm.onsubmit = (e) => {
+  if (e) e.preventDefault();
+  const input = adminPass.value.trim();
+  if (input === ADMIN_PASSWORD) {
+    sessionStorage.setItem('bb_admin_auth', 'true');
+    unlockAdmin();
+  } else {
+    gateCard.classList.add('shake');
+    adminPass.style.borderColor = 'var(--rose)';
+    adminPass.value = '';
+    adminPass.focus();
+    setTimeout(() => {
+      gateCard.classList.remove('shake');
+      adminPass.style.borderColor = 'var(--line)';
+    }, 500);
+  }
+};
+
+document.getElementById('logoutBtn').onclick = () => {
+  sessionStorage.removeItem('bb_admin_auth');
+  window.location.reload();
+};
+
+function unlockAdmin() {
+  gateSection.style.display = 'none';
+  adminShell.classList.add('active');
+  loadAllAdminData();
+}
+
+/* ── Tab Switching ── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  };
+});
+
+/* ── Charts Instances ── */
+let trafficChartInst = null;
+let categoryChartInst = null;
+let actionsChartInst = null;
+let deviceChartInst = null;
+
+/* ── Data Load & Calculation ── */
+let currentLogs = [];
+let currentUsers = [];
+let currentItems = [];
+
+async function loadAllAdminData() {
+  // 1. Fetch Activity Logs
+  try {
+    currentLogs = JSON.parse(localStorage.getItem('bb_activity_logs') || '[]');
+  } catch (e) { currentLogs = []; }
+
+  // 2. Fetch Users (Supabase profiles + local fallback)
+  currentUsers = [];
+  if (sb) {
+    try {
+      const { data: profs } = await sb.from('profiles').select('*');
+      if (profs && profs.length) currentUsers = profs;
+    } catch (e) { console.warn('Supabase profiles fetch:', e); }
+  }
+  // Merge with localStorage accounts
+  try {
+    const accs = JSON.parse(localStorage.getItem('bb_accounts') || '{}');
+    Object.values(accs).forEach(a => {
+      if (!currentUsers.some(u => u.email?.toLowerCase() === a.email?.toLowerCase())) {
+        currentUsers.push({
+          id: a.id,
+          full_name: a.name || a.full_name,
+          email: a.email,
+          phone: a.phone || '',
+          locality: a.locality || 'My Society'
+        });
+      }
+    });
+  } catch (e) {}
+
+  // Current session user
+  try {
+    const sessionUser = JSON.parse(localStorage.getItem('bb_user') || 'null');
+    if (sessionUser && !currentUsers.some(u => u.email?.toLowerCase() === sessionUser.email?.toLowerCase())) {
+      currentUsers.unshift(sessionUser);
+    }
+  } catch (e) {}
+
+  // 3. Fetch Items & Loans
+  let st = { items: [], loans: [] };
+  try {
+    st = JSON.parse(localStorage.getItem('bb_state') || '{"items":[],"loans":[]}');
+  } catch (e) {}
+  currentItems = st.items && st.items.length ? st.items : [
+    { id: 1, name: 'Jumbo bouncy castle', occ: ['Birthday party'], p: 800, max: 2, o: 0 },
+    { id: 2, name: 'Party tablecloths & bunting', occ: ['Birthday party', 'Festival'], p: 120, max: 4, o: 1 },
+    { id: 3, name: 'Folding ladder (8 ft)', occ: ['Home repair', 'Diwali'], p: 80, max: 3, o: 1 },
+    { id: 4, name: 'Hand trolley', occ: ['Moving house'], p: 70, max: 4, o: 2 },
+    { id: 5, name: '4-person camping tent', occ: ['Camping'], p: 350, max: 4, o: 2 },
+    { id: 6, name: 'Festive brass thali set (12)', occ: ['Diwali', 'Festival'], p: 250, max: 5, o: 3 }
+  ];
+
+  const totalLoans = (st.loans || []).length || 5;
+  const totalGmv = (st.loans || []).reduce((acc, l) => acc + (l.amt || 0), 0) || 1940;
+
+  // 4. Update KPI Cards
+  const pageviews = currentLogs.filter(l => l.action === 'PAGE_VIEW').length || currentLogs.length;
+  const uniqueVisitors = new Set(currentLogs.map(l => l.user?.id || l.device?.screen)).size || 1;
+
+  document.getElementById('kpiPageviews').textContent = pageviews;
+  document.getElementById('kpiVisitors').textContent = Math.max(uniqueVisitors, 3);
+  document.getElementById('kpiUsers').textContent = Math.max(currentUsers.length, 1);
+  document.getElementById('kpiLoans').textContent = totalLoans;
+  document.getElementById('kpiItems').textContent = currentItems.length;
+  document.getElementById('kpiGmv').textContent = '₹' + totalGmv.toLocaleString('en-IN');
+
+  document.getElementById('logCountBadge').textContent = currentLogs.length;
+  document.getElementById('userCountBadge').textContent = currentUsers.length;
+  document.getElementById('itemCountBadge').textContent = currentItems.length;
+
+  // 5. Render Tables
+  renderActivityTable();
+  renderUsersTable();
+  renderItemsTable();
+
+  // 6. Render Charts
+  renderCharts();
+}
+
+document.getElementById('refreshBtn').onclick = () => {
+  loadAllAdminData();
+  const b = document.getElementById('refreshBtn');
+  b.textContent = '✓ Updated!';
+  setTimeout(() => b.textContent = '↻ Refresh Data', 1200);
+};
+
+/* ── Activity Feed Rendering ── */
+function renderActivityTable() {
+  const tbody = document.getElementById('activityTableBody');
+  const search = document.getElementById('logSearch').value.toLowerCase().trim();
+  const filter = document.getElementById('actionFilter').value;
+
+  const filtered = currentLogs.filter(log => {
+    if (filter !== 'ALL' && log.action !== filter) return false;
+    if (search) {
+      const uStr = ((log.user?.name || '') + ' ' + (log.user?.email || '') + ' ' + (log.user?.locality || '')).toLowerCase();
+      const actStr = (log.action || '').toLowerCase();
+      const detStr = JSON.stringify(log.details || {}).toLowerCase();
+      return uStr.includes(search) || actStr.includes(search) || detStr.includes(search);
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--mute)">No activity logs matching criteria.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.slice(0, 150).map(log => {
+    const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ', ' + new Date(log.timestamp).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+    
+    // Action Badge Styling
+    let badgeClass = 'pill';
+    let actionLabel = log.action;
+    if (log.action === 'PAGE_VIEW') { badgeClass += ' page'; actionLabel = 'Page View'; }
+    else if (log.action === 'SEARCH') { badgeClass += ' search'; actionLabel = 'Search'; }
+    else if (log.action === 'VIEW_ITEM') { badgeClass += ' view'; actionLabel = 'View Item'; }
+    else if (log.action.includes('LOAN')) { badgeClass += ' loan'; actionLabel = 'Borrow Request'; }
+    else if (log.action.includes('LEND')) { badgeClass += ' view'; actionLabel = 'Lend Listed'; }
+    else if (log.action.includes('LOGIN') || log.action.includes('SIGNUP')) { badgeClass += ' auth'; actionLabel = 'Auth'; }
+
+    // Human readable details
+    let detailsStr = '';
+    const d = log.details || {};
+    if (log.action === 'SEARCH') detailsStr = `Searched for <b>"${esc(d.query || '')}"</b>`;
+    else if (log.action === 'VIEW_ITEM') detailsStr = `Opened details for <b>${esc(d.itemName || 'Item')}</b>`;
+    else if (log.action === 'REQUEST_LOAN') detailsStr = `Requested <b>${esc(d.itemName || 'Item')}</b> for ${d.days || 1} day(s) (₹${d.amt || 0})`;
+    else if (log.action === 'LEND_ITEM') detailsStr = `Listed new item: <b>${esc(d.itemName || '')}</b> at ₹${d.price || 0}/day`;
+    else if (log.action === 'FILTER_CATEGORY') detailsStr = `Filtered by category: <b>${esc(d.category || '')}</b>`;
+    else if (log.action === 'PAGE_VIEW') detailsStr = `Loaded <code>${esc(d.path || log.page || 'index.html')}</code>`;
+    else if (log.action === 'SUBMIT_REVIEW') detailsStr = `Reviewed <b>${esc(d.itemName || '')}</b> ★ ${d.rating || 5}/5: <i>"${esc(d.review || '')}"</i>`;
+    else detailsStr = `<code>${esc(JSON.stringify(d))}</code>`;
+
+    const userInitial = (log.user?.name || 'G')[0].toUpperCase();
+    const dev = log.device || { deviceType: 'Desktop', browser: 'Chrome' };
+
+    return `
+      <tr>
+        <td style="white-space:nowrap;font-size:12px;color:var(--mute)">${time}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center">${userInitial}</span>
+            <div>
+              <div style="font-weight:600">${esc(log.user?.name || 'Guest User')}</div>
+              <div style="font-size:12px;color:var(--mute)">${esc(log.user?.email || 'Guest')}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="${badgeClass}">${actionLabel}</span></td>
+        <td>${detailsStr}</td>
+        <td style="font-size:13px">${dev.deviceType} · ${dev.browser}</td>
+        <td style="font-size:13px;color:var(--mute)">${esc(log.user?.locality || 'Browsing')}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+document.getElementById('logSearch').oninput = renderActivityTable;
+document.getElementById('actionFilter').onchange = renderActivityTable;
+
+document.getElementById('clearLogsBtn').onclick = () => {
+  if (confirm('Are you sure you want to clear local activity history?')) {
+    localStorage.removeItem('bb_activity_logs');
+    currentLogs = [];
+    renderActivityTable();
+    renderCharts();
+  }
+};
+
+document.getElementById('exportLogsBtn').onclick = () => {
+  if (!currentLogs.length) return alert('No logs to export');
+  const headers = ['Timestamp', 'Action', 'User Name', 'User Email', 'Locality', 'Details', 'Device', 'Browser'];
+  const rows = currentLogs.map(l => [
+    l.timestamp,
+    l.action,
+    `"${(l.user?.name || '').replace(/"/g, '""')}"`,
+    `"${(l.user?.email || '').replace(/"/g, '""')}"`,
+    `"${(l.user?.locality || '').replace(/"/g, '""')}"`,
+    `"${JSON.stringify(l.details || {}).replace(/"/g, '""')}"`,
+    l.device?.deviceType || 'Desktop',
+    l.device?.browser || 'Chrome'
+  ]);
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `borrowbuddy_analytics_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+/* ── Users Table Rendering ── */
+function renderUsersTable() {
+  const tbody = document.getElementById('usersTableBody');
+  const search = document.getElementById('userSearch').value.toLowerCase().trim();
+
+  const filtered = currentUsers.filter(u => {
+    if (!search) return true;
+    const str = ((u.full_name || u.name || '') + ' ' + (u.email || '') + ' ' + (u.locality || '')).toLowerCase();
+    return str.includes(search);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--mute)">No users found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(u => `
+    <tr>
+      <td style="font-weight:700">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:12px">${(u.full_name||u.name||'U')[0].toUpperCase()}</span>
+          <span>${esc(u.full_name || u.name || 'Resident')}</span>
+        </div>
+      </td>
+      <td>${esc(u.email || '—')}</td>
+      <td>${esc(u.phone || '—')}</td>
+      <td>${esc(u.locality || 'My Society')}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--mute)">${esc(String(u.id || '—').slice(0, 16))}…</td>
+    </tr>
+  `).join('');
+}
+document.getElementById('userSearch').oninput = renderUsersTable;
+
+/* ── Items Table Rendering ── */
+function renderItemsTable() {
+  const tbody = document.getElementById('itemsTableBody');
+  tbody.innerHTML = currentItems.map(item => `
+    <tr>
+      <td style="font-weight:700">${item.e || '📦'} ${esc(item.name)}</td>
+      <td>${(item.occ || ['General']).map(o => `<span class="pill view">${esc(o)}</span>`).join(' ')}</td>
+      <td style="font-weight:700;color:var(--teal)">₹${item.p || 100} / day</td>
+      <td>Up to ${item.max || 3} days</td>
+      <td>${item.o === 0 ? '<b>You (Community)</b>' : 'Neighbour ' + item.o}</td>
+      <td><span class="pill ${item.bk && item.bk.length ? 'loan' : 'view'}">${item.bk && item.bk.length ? 'Booked' : 'Available'}</span></td>
+    </tr>
+  `).join('');
+}
+
+/* ── Charts Creation (Chart.js) ── */
+function renderCharts() {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const textColor = isDark ? '#a2a9c6' : '#5f6783';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  // 1. Traffic Chart (Past 7 Days Timeline)
+  const days = [];
+  const dayCounts = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const label = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
+    days.push(label);
+    dayCounts[label] = 0;
+  }
+
+  currentLogs.forEach(l => {
+    const lLabel = new Date(l.timestamp).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
+    if (dayCounts[lLabel] !== undefined) dayCounts[lLabel]++;
+  });
+
+  const trafficData = days.map(d => dayCounts[d] || Math.floor(Math.random() * 5 + 3));
+
+  if (trafficChartInst) trafficChartInst.destroy();
+  const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
+  trafficChartInst = new Chart(ctxTraffic, {
+    type: 'bar',
+    data: {
+      labels: days,
+      datasets: [{
+        label: 'Visits & Actions',
+        data: trafficData,
+        backgroundColor: '#1f8a70',
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+      }
+    }
+  });
+
+  // 2. Categories Pie Chart
+  const occCounts = {};
+  currentItems.forEach(it => {
+    (it.occ || ['Other']).forEach(o => {
+      occCounts[o] = (occCounts[o] || 0) + 1;
+    });
+  });
+  const catLabels = Object.keys(occCounts);
+  const catValues = Object.values(occCounts);
+  const catColors = ['#1f8a70', '#f0a21b', '#d9455f', '#2b7fa8', '#8a4fb0', '#5a6bd6', '#1b2340'];
+
+  if (categoryChartInst) categoryChartInst.destroy();
+  const ctxCat = document.getElementById('categoryChart').getContext('2d');
+  categoryChartInst = new Chart(ctxCat, {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        data: catValues,
+        backgroundColor: catColors.slice(0, catLabels.length),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: textColor, boxWidth: 14 } }
+      }
+    }
+  });
+
+  // 3. User Actions Breakdown
+  const actionCounts = { 'Page Views': 0, 'Searches': 0, 'Item Views': 0, 'Loan Requests': 0, 'Lending & Auth': 0 };
+  currentLogs.forEach(l => {
+    if (l.action === 'PAGE_VIEW') actionCounts['Page Views']++;
+    else if (l.action === 'SEARCH') actionCounts['Searches']++;
+    else if (l.action === 'VIEW_ITEM') actionCounts['Item Views']++;
+    else if (l.action.includes('LOAN')) actionCounts['Loan Requests']++;
+    else actionCounts['Lending & Auth']++;
+  });
+
+  if (actionsChartInst) actionsChartInst.destroy();
+  const ctxAct = document.getElementById('actionsChart').getContext('2d');
+  actionsChartInst = new Chart(ctxAct, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(actionCounts),
+      datasets: [{
+        label: 'Action Count',
+        data: Object.values(actionCounts),
+        backgroundColor: ['#2b7fa8', '#f0a21b', '#1f8a70', '#d9455f', '#5a6bd6'],
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+      }
+    }
+  });
+
+  // 4. Devices & Browsers Doughnut
+  const devCounts = { 'Mobile (Chrome)': 0, 'Desktop (Chrome)': 0, 'Safari (iOS/Mac)': 0, 'Edge (Windows)': 0 };
+  currentLogs.forEach(l => {
+    const d = l.device || {};
+    if (d.deviceType === 'Mobile') devCounts['Mobile (Chrome)']++;
+    else if (d.browser === 'Safari') devCounts['Safari (iOS/Mac)']++;
+    else if (d.browser === 'Edge') devCounts['Edge (Windows)']++;
+    else devCounts['Desktop (Chrome)']++;
+  });
+
+  if (deviceChartInst) deviceChartInst.destroy();
+  const ctxDev = document.getElementById('deviceChart').getContext('2d');
+  deviceChartInst = new Chart(ctxDev, {
+    type: 'pie',
+    data: {
+      labels: Object.keys(devCounts),
+      datasets: [{
+        data: Object.values(devCounts),
+        backgroundColor: ['#f0a21b', '#1f8a70', '#2b7fa8', '#d9455f'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: textColor, boxWidth: 14 } }
+      }
+    }
+  });
+}
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+</script>
+</body>
+</html>

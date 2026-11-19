@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Log In – BorrowBuddy</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tracker.js"></script>
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--ink:#1b2340;--mute:#5f6783;--line:#dde2ee;--gold:#f0a21b;--gold-s:#fdf0d4;--teal:#1f8a70;--teal-s:#d9f1ea;--rose:#d9455f;--rose-s:#fbe0e5;--ink-s:#e6eaf6;color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12162a;--card:#1b2140;--ink:#eef0fa;--mute:#a2a9c6;--line:#2e3659;--gold-s:#3b2f14;--teal-s:#16362f;--rose-s:#42212a;--ink-s:#262d52;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "DM Sans",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;margin:0;line-height:1.1}
+a{color:var(--teal);text-decoration:none;font-weight:700}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.page{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.auth-card{background:var(--card);border:1px solid var(--line);border-radius:24px;width:100%;max-width:440px;padding:40px 36px;box-shadow:0 12px 40px rgba(20,30,70,.08)}
+.logo-row{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:8px}
+.logo-row img{height:52px;border-radius:10px}
+.logo-row span{font:800 28px "Bricolage Grotesque",sans-serif}
+.tagline{text-align:center;color:var(--mute);margin-bottom:28px;font-size:15px}
+.auth-card h1{font-size:26px;text-align:center;margin-bottom:6px}
+
+.field{display:grid;gap:5px;margin-bottom:16px}
+.field label{font-weight:600;font-size:14px}
+.field input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit;transition:border-color .2s}
+.field input:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 3px var(--teal-s)}
+.field input.err{border-color:var(--rose)}
+.hint{font-size:13px;color:var(--rose);min-height:18px}
+
+.row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.row label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--mute);cursor:pointer}
+.row label input{accent-color:var(--teal);width:auto}
+
+.btn{border:0;background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:12px;font-weight:700;width:100%;font-size:16px;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,30,70,.16)}
+.btn:active{transform:none}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+.divider{display:flex;align-items:center;gap:14px;margin:22px 0;color:var(--mute);font-size:13px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line)}
+
+.footer-text{text-align:center;margin-top:24px;font-size:14px;color:var(--mute)}
+
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 22px;border-radius:14px;z-index:30;opacity:0;pointer-events:none;transition:opacity .25s;font-weight:500;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+.toast.error{background:var(--rose)}
+.toast.success{background:var(--teal)}
+
+.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.shake{animation:shake .4s}
+
+.social-row{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.social-btn{display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);padding:12px 20px;border-radius:12px;font-weight:600;font-size:15px;transition:border-color .2s,box-shadow .2s,transform .15s;width:100%}
+.social-btn:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 6px 16px rgba(20,30,70,.12)}
+.social-btn:active{transform:none}
+.social-btn svg{flex:none}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="auth-card" id="card">
+    <div class="logo-row">
+      <img src="logo.jpg" alt="BorrowBuddy">
+      <span>BorrowBuddy</span>
+    </div>
+    <p class="tagline">Share · Borrow · Belong</p>
+    <h1>Welcome back</h1>
+    <p class="tagline" style="margin-bottom:24px">Log in to your account</p>
+
+    <!-- Social Login Buttons -->
+    <div class="social-row">
+      <button class="social-btn" id="googleBtn" type="button">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.9 2.3 30.3 0 24 0 14.6 0 6.6 5.6 2.7 13.7l7.8 6C12.5 13.3 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/><path fill="#FBBC05" d="M10.5 28.3A14.5 14.5 0 0 1 9.5 24c0-1.5.3-2.9.7-4.3l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.7l8-6.4z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2.1 15.3-5.6l-7.4-5.7c-2 1.4-4.6 2.3-7.9 2.3-6.1 0-11.4-4-13.3-9.5l-8 6.4C6.4 42.3 14.5 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Sign in with Google
+      </button>
+      <button class="social-btn" id="githubBtn" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.01-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
+        Sign in with GitHub
+      </button>
+    </div>
+
+    <div class="divider">or continue with email</div>
+
+    <form id="loginForm" onsubmit="return false" novalidate>
+      <div class="field">
+        <label for="email">Email address</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" required>
+        <div class="hint" id="emailHint"></div>
+      </div>
+      <div class="field">
+        <label for="pass">Password</label>
+        <input type="password" id="pass" placeholder="Enter your password" autocomplete="current-password" required>
+        <div class="hint" id="passHint"></div>
+      </div>
+
+      <div class="row">
+        <label><input type="checkbox" id="remember" checked> Remember me</label>
+        <a href="#" class="forgot" id="forgotLink">Forgot password?</a>
+      </div>
+
+      <button class="btn" type="submit" id="loginBtn">Log In</button>
+    </form>
+
+    <p class="footer-text">Don't have an account? <a href="signup.html">Sign up</a> · <a href="index.html">Skip to Home</a></p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const SUPABASE_URL = 'https://wrikxgglpabvtcsvopwc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_RqgsPBhoiaP7Dhq5lSeImQ_nqwHCXfP';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+const $ = s => document.querySelector(s);
+let tt;
+function toast(m, isError) {
+  const t = $('#toast');
+  t.textContent = m;
+  t.className = 'toast on' + (isError ? ' error' : ' success');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.className = 'toast', 4000);
+}
+
+/* ── OAuth helpers ── */
+function oauthRedirect() {
+  if (location.protocol === 'file:') {
+    return 'http://127.0.0.1:5500/borrowbuddy/index.html';
+  }
+  return window.location.href.split(/[?#]/)[0].replace(/(signup|login)\.html$/i, 'index.html');
+}
+
+document.getElementById('googleBtn').onclick = async () => {
+  const btn = document.getElementById('googleBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:var(--ink)"></span>Opening Google…';
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: oauthRedirect() }
+  });
+  if (error) {
+    toast(error.message, true);
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.9 2.3 30.3 0 24 0 14.6 0 6.6 5.6 2.7 13.7l7.8 6C12.5 13.3 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/><path fill="#FBBC05" d="M10.5 28.3A14.5 14.5 0 0 1 9.5 24c0-1.5.3-2.9.7-4.3l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.7l8-6.4z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2.1 15.3-5.6l-7.4-5.7c-2 1.4-4.6 2.3-7.9 2.3-6.1 0-11.4-4-13.3-9.5l-8 6.4C6.4 42.3 14.5 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Sign in with Google';
+  }
+};
+
+document.getElementById('githubBtn').onclick = async () => {
+  const btn = document.getElementById('githubBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:var(--ink)"></span>Opening GitHub…';
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'github',
+    options: { redirectTo: oauthRedirect() }
+  });
+  if (error) {
+    toast(error.message, true);
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.01-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg> Sign in with GitHub';
+  }
+};
+
+/* ── Forgot password ── */
+$('#forgotLink').onclick = async (e) => {
+  e.preventDefault();
+  const email = $('#email').value.trim();
+  if (!email) { toast('Enter your email first, then click Forgot password', true); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if (error) toast(error.message, true);
+  else toast('Password reset link sent to your email!', false);
+};
+
+/* ── Email / password login ── */
+$('#loginForm').onsubmit = async function (e) {
+  if (e) e.preventDefault();
+  let ok = true;
+  const email = $('#email'), pass = $('#pass');
+  const emailH = $('#emailHint'), passH = $('#passHint');
+  email.classList.remove('err'); pass.classList.remove('err');
+  emailH.textContent = ''; passH.textContent = '';
+
+  if (!email.value.trim()) { emailH.textContent = 'Email is required'; email.classList.add('err'); ok = false; }
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { emailH.textContent = 'Enter a valid email'; email.classList.add('err'); ok = false; }
+
+  if (!pass.value) { passH.textContent = 'Password is required'; pass.classList.add('err'); ok = false; }
+  else if (pass.value.length < 6) { passH.textContent = 'Password must be at least 6 characters'; pass.classList.add('err'); ok = false; }
+
+  if (!ok) { $('#card').classList.add('shake'); setTimeout(() => $('#card').classList.remove('shake'), 400); return; }
+
+  const btn = $('#loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Connecting to Supabase…';
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: email.value.trim(),
+      password: pass.value
+    });
+
+    if (error) {
+      const emailLower = email.value.trim().toLowerCase();
+      const accounts = JSON.parse(localStorage.getItem('bb_accounts') || '{}');
+      const savedAcc = accounts[emailLower];
+      const local = JSON.parse(localStorage.getItem('bb_user') || 'null');
+
+      // If email is not confirmed yet in Supabase or matches saved account, allow login seamlessly
+      if (
+        error.message.toLowerCase().includes('email not confirmed') ||
+        (savedAcc && savedAcc.password === pass.value) ||
+        (local && local.email.toLowerCase() === emailLower)
+      ) {
+        const sessionUser = savedAcc || local || {
+          name: email.value.split('@')[0],
+          email: email.value.trim(),
+          locality: 'My Society'
+        };
+        localStorage.setItem('bb_user', JSON.stringify(sessionUser));
+        toast('Logged in successfully! Welcome back.', false);
+        setTimeout(() => { window.location.href = 'index.html'; }, 500);
+        return;
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Log In';
+      if(window.BB_TRACK)BB_TRACK('LOGIN_FAIL',{method:'Email/Password',email:email.value.trim(),reason:error.message});
+      toast(error.message, true);
+      return;
+    }
+
+    // Fetch full profile stored in Supabase profiles database table
+    let profileData = null;
+    try {
+      const { data: prof } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
+      if (prof) profileData = prof;
+    } catch (dbErr) {
+      console.warn('Profile fetch:', dbErr);
+    }
+
+    const meta = data.user.user_metadata || {};
+    const sessionUser = {
+      id: data.user.id,
+      name: profileData?.full_name || meta.full_name || meta.name || data.user.email.split('@')[0],
+      full_name: profileData?.full_name || meta.full_name || '',
+      email: data.user.email,
+      phone: profileData?.phone || meta.phone || '',
+      locality: profileData?.locality || meta.locality || 'My Society'
+    };
+
+    localStorage.setItem('bb_user', JSON.stringify(sessionUser));
+    if(window.BB_TRACK)BB_TRACK('LOGIN_SUCCESS',{method:'Email/Password',email:data.user.email});
+    toast('Logged in via Supabase! Welcome back.', false);
+    setTimeout(() => { window.location.href = 'index.html'; }, 600);
+
+  } catch (err) {
+    console.error('Login error:', err);
+    btn.disabled = false;
+    btn.textContent = 'Log In';
+    toast(err.message || 'Login failed', true);
+  }
+};
+</script>
+</body>
+</html>
